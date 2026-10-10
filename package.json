@@ -1,0 +1,35 @@
+{
+	"name": "pi-herdr-clean-craft",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Unofficial Pi methodology pack inspired by Robert C. Martin's engineering practices. Pre-release scaffold: only the craft-mode hub ships.",
+	"keywords": ["pi-package", "pi", "herdr", "tdd", "refactoring", "clean-code"],
+	"license": "MIT",
+	"author": {
+		"name": "Giuseppe Rodriguez",
+		"url": "https://github.com/giuseppecrj"
+	},
+	"type": "module",
+	"files": [
+		"LICENSE",
+		"README.md",
+		"THIRD_PARTY_NOTICES.md",
+		"docs/compatibility.md",
+		"docs/provenance.md",
+		"docs/verification.md",
+		"skills/craft-mode/SKILL.md",
+		"skills/craft-mode/references/authorization.md",
+		"skills/craft-mode/references/delegation.md",
+		"skills/craft-mode/references/reporting.md",
+		"skills/craft-mode/references/workflows.md"
+	],
+	"scripts": {
+		"test": "node --test --test-concurrency=1 test/*.test.mjs"
+	},
+	"peerDependencies": {
+		"pi-herdr-agents": "3.2.1"
+	},
+	"pi": {
+		"skills": ["./skills"]
+	}
+}
