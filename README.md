@@ -38,7 +38,11 @@ Loading a skill grants no permission to commit, install, publish, or change sett
 
 There is no published release. The verified path is registering this checkout's absolute directory as a local package source in test-owned Pi settings. Registering it in your own settings, for example with `pi install /absolute/path/to/pi-herdr-clean-craft`, uses the same mechanism but writes to your Pi configuration, so do it only when you intend to.
 
-`package.json` declares `pi-herdr-agents` 3.2.1 as a peer. That is the inspected candidate, not a validated pairing, and an npm peer declaration does not activate a Pi extension. Install the host through Pi if you want delegation. The hub's local route does not use it.
+`package.json` declares `pi-herdr-agents` 3.2.1 as a peer. That is the exercised candidate, not a validated pairing: the integration gate fails one host check, the `skills` option for standalone children, and usually fails isolation on a later request that follows from it. An npm peer declaration does not activate a Pi extension. Install the host through Pi if you want delegation. The hub's local route does not use it.
+
+## Checks
+
+`npm test` runs the default suite. It needs the Pi CLI and Linux `/proc`, but not Herdr, the host, or pstack. `npm run test:integration` is a separate required gate. It runs the packed package against a real host and pstack that you name with `CLEAN_CRAFT_HOST_ROOT` and `CLEAN_CRAFT_PSTACK_ROOT`, in a test-owned Herdr server on Linux. A failed run keeps its evidence even when `CLEAN_CRAFT_EVIDENCE_DIR` is unset, and prints where. Either command reports a missing prerequisite as `BLOCKED` and exits nonzero, because a check that could not run has not passed. [Verification](docs/verification.md) explains both.
 
 ## Documentation
 

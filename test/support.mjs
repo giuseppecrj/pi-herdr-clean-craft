@@ -1,4 +1,3 @@
-import { spawn } from "node:child_process";
 import {
 	copyFileSync,
 	existsSync,
@@ -16,6 +15,8 @@ import {
 import { tmpdir } from "node:os";
 import { basename, delimiter, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { deadline } from "./phase3/event-log.mjs";
+import { runBounded } from "./phase3/processes.mjs";
 
 export const PACKAGE_ROOT = realpathSync(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
 
@@ -166,9 +167,24 @@ export function checkSkill(skillDir) {
 	return { fields, references: [...references].toSorted(), siblings: [...siblings].toSorted(), problems };
 }
 
+const RUN_GRACE_MS = 1_000;
+const unresolvedRuns = new Set();
+
+export function unresolvedUnder(dir) {
+	return [...unresolvedRuns].filter((entry) => entry.root === dir || entry.root.startsWith(`${dir}${sep}`));
+}
+
+function describeRun({ argv, identity, identityProblem, reason }) {
+	return `${basename(argv[0])} ${identity ? `pid ${identity.pid} start ${identity.startTime}` : `with unknown identity (${identityProblem})`} ${reason}`;
+}
+
 export function makeTempRoot(t, label, parent = tmpdir()) {
 	const root = realpathSync(mkdtempSync(join(parent, `clean-craft-${label}-`)));
-	t.after(() => rmSync(root, { recursive: true, force: true }));
+	t.after(() => {
+		const open = unresolvedUnder(root);
+		if (open.length > 0) throw new Error(`retained ${root} because a command it owns has not closed: ${open.map(describeRun).join("; ")}`);
+		rmSync(root, { recursive: true, force: true });
+	});
 	return root;
 }
 
@@ -212,33 +228,30 @@ export function isolatedEnv(root, extra = {}) {
 	};
 }
 
-export function run(command, args, { cwd, env, timeoutMs, input }) {
-	return new Promise((resolvePromise, reject) => {
-		const child = spawn(command, args, { cwd, env, stdio: ["pipe", "pipe", "pipe"] });
-		let stdout = "";
-		let stderr = "";
-		let timedOut = false;
-		const timer = setTimeout(() => {
-			timedOut = true;
-			child.kill("SIGKILL");
-		}, timeoutMs);
-		child.stdout.setEncoding("utf8").on("data", (chunk) => {
-			stdout += chunk;
+export async function run(command, args, { cwd, env, timeoutMs, input, root, graceMs = RUN_GRACE_MS }) {
+	const name = basename(command);
+	if (typeof root !== "string") throw new TypeError(`${name} needs the owned root it may write into`);
+	const result = await runBounded({ command, args, cwd, env, input, limit: deadline(timeoutMs, name), grace: graceMs });
+	if (result.closure !== "closed") {
+		const ended = result.exit ? `it exited ${result.exit.signal ? `on ${result.exit.signal}` : `with code ${result.exit.code}`}` : "its exit was not observed";
+		const reason = `exceeded ${timeoutMs} ms; ${ended}, but its output did not close within ${graceMs} ms more, so a process it started may still hold it`;
+		const entry = Object.freeze({
+			root,
+			argv: Object.freeze([command, ...args]),
+			identity: result.identity,
+			identityProblem: result.identityProblem,
+			exit: result.exit,
+			reason,
+			closed: result.closed,
 		});
-		child.stderr.setEncoding("utf8").on("data", (chunk) => {
-			stderr += chunk;
-		});
-		child.on("error", (error) => {
-			clearTimeout(timer);
-			reject(error);
-		});
-		child.on("close", (code, signal) => {
-			clearTimeout(timer);
-			if (timedOut) reject(new Error(`${basename(command)} exceeded ${timeoutMs} ms\nstderr:\n${stderr}`));
-			else resolvePromise({ code, signal, stdout, stderr });
-		});
-		child.stdin.end(input ?? "");
-	});
+		unresolvedRuns.add(entry);
+		result.closed.then(() => unresolvedRuns.delete(entry));
+		throw new Error(`${describeRun(entry)}; ${root} is retained`);
+	}
+	if (result.errors.length > 0) throw new Error(`${name} failed: ${result.errors.join(", ")}\nstderr:\n${result.stderr}`);
+	if (result.timedOut) throw new Error(`${name} exceeded ${timeoutMs} ms\nstderr:\n${result.stderr}`);
+	if (result.truncated) throw new Error(`${name} wrote more output than the capture limit`);
+	return { code: result.code, signal: result.signal, stdout: result.stdout, stderr: result.stderr };
 }
 
 function stageCandidate(source, root) {
@@ -261,15 +274,20 @@ function stageCandidate(source, root) {
 }
 
 export async function npmPack(t, { dryRun, candidateRoot = PACKAGE_ROOT, tempParent }) {
+	return packInto(makeTempRoot(t, "npm", tempParent), { dryRun, candidateRoot });
+}
+
+export async function packInto(root, { dryRun, candidateRoot = PACKAGE_ROOT }) {
 	const npm = findExecutable("npm");
 	if (!npm) throw new Error("npm was not found on PATH; the package contents gate cannot run");
-	const root = makeTempRoot(t, "npm", tempParent);
+	mkdirSync(root, { recursive: true });
 	const stage = stageCandidate(candidateRoot, root);
 	const mode = dryRun ? ["--dry-run"] : ["--pack-destination", root];
 	const result = await run(npm, ["pack", "--json", "--ignore-scripts", ...mode], {
 		cwd: stage,
 		env: isolatedEnv(root),
 		timeoutMs: 60_000,
+		root,
 	});
 	if (result.code !== 0) throw new Error(`npm pack exited ${result.code}\n${result.stderr}`);
 	const [entry] = JSON.parse(result.stdout);
@@ -283,6 +301,7 @@ export async function extractPack({ entry, root }) {
 		cwd: root,
 		env: isolatedEnv(root),
 		timeoutMs: 30_000,
+		root,
 	});
 	if (tar.code !== 0) throw new Error(`tar exited ${tar.code}\n${tar.stderr}`);
 	return join(extract, "package");

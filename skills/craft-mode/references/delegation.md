@@ -23,6 +23,8 @@ Delegate to bare children, not named roles. Every brief states:
 
 Repeat the constraints that matter in the task text itself, not only in the role text.
 
+Measured with Pi 1.1.0 and pi-herdr-agents 3.2.1: a standalone child launched with the host's skills option received its task without that skill's instructions, which reached it only in a later request. Do not rely on the option to load a stage skill. Name the SKILL.md and reference file paths in the task text, and tell the child to read them before it starts work.
+
 ## Waiting and review
 
 Results arrive on their own. Do not sleep, poll status lists, or tail session files while a child works.

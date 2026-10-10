@@ -51,7 +51,7 @@ async function discoveredCommands(t, packageRoot) {
 	const pi = requirePi();
 	const root = makeTempRoot(t, "pi");
 	const { agentDir, cwd, env } = piEnv(root);
-	const version = await run(pi, ["--version"], { cwd, env, timeoutMs: 15_000 });
+	const version = await run(pi, ["--version"], { cwd, env, timeoutMs: 15_000, root });
 	assert.equal(version.code, 0, version.stderr);
 	t.diagnostic(`pi ${version.stdout.trim()} at ${pi}`);
 	writeFileSync(
@@ -61,6 +61,7 @@ async function discoveredCommands(t, packageRoot) {
 	const result = await run(pi, PI_FLAGS, {
 		cwd,
 		env,
+		root,
 		timeoutMs: 30_000,
 		input: `${JSON.stringify({ id: "discover", type: "get_commands" })}\n`,
 	});
@@ -109,7 +110,6 @@ describe("Pi RPC discovery of a locally registered package", () => {
 		assertInventoryRegistered(await discoveredCommands(t, packageRoot), packageRoot);
 	});
 
-	it.todo("delivers complete /skill:craft-mode instructions on a model request (later gate, not measured)");
-	it.todo("resolves skills in fresh pi-herdr-agents children (Phase 3 host gate, not measured)");
+	it.todo("host orchestration, fresh-child resources and pstack coexistence (separate required gate: npm run test:integration, not run here)");
 	it.todo("follows the methodology with a live model (Phase 6 evaluation, not measured)");
 });

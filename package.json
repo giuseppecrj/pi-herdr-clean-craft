@@ -33,7 +33,8 @@
 		"skills/craft-mutation/references/interpretation.md"
 	],
 	"scripts": {
-		"test": "node --test --test-concurrency=1 test/*.test.mjs"
+		"test": "node --test --test-concurrency=1 test/*.test.mjs",
+		"test:integration": "node --test --test-concurrency=1 test/integration/*.test.mjs"
 	},
 	"peerDependencies": {
 		"pi-herdr-agents": "3.2.1"
