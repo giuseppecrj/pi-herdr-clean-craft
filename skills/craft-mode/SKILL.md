@@ -1,6 +1,6 @@
 ---
 name: craft-mode
-description: Scope and route an engineering task through explicit behavior, test-first evidence, and verification, then report what was proven. Explicit invocation only. This release ships only this hub, so it reports missing stage skills instead of improvising them.
+description: Scope and route an engineering task through explicit behavior, test-first evidence, and verification, then report what was proven. Explicit invocation only. Routes to five bundled stage skills and reports the unshipped specification and final QA stages as blocked instead of improvising them.
 disable-model-invocation: true
 ---
 
@@ -12,9 +12,17 @@ This is a one-shot load. Reading this skill does not switch on a persistent mode
 
 ## What this release contains
 
-Only this hub and its four references ship today. The stage skills it routes to (craft-tdd, craft-refactor, craft-architecture, craft-quality, craft-mutation, craft-spec, and craft-qa) are planned, not present.
+This hub ships with five stage skills in sibling directories:
 
-A stage skill counts as available only if you can read its `SKILL.md` in a sibling directory of this skill, such as `../craft-tdd/SKILL.md`. When a stage you need is missing:
+- [craft-tdd](../craft-tdd/SKILL.md): change behavior test-first, starting from a meaningful failing test.
+- [craft-refactor](../craft-refactor/SKILL.md): improve structure without changing behavior.
+- [craft-architecture](../craft-architecture/SKILL.md): review dependency and policy boundaries. Read-only by default.
+- [craft-quality](../craft-quality/SKILL.md): assess risk from qualified measurements. Report-only by default.
+- [craft-mutation](../craft-mutation/SKILL.md): check whether tests notice seeded changes.
+
+Two planned stages are not part of this release: craft-spec, for specifying new behavior and acceptance criteria, and craft-qa, for independent verification through the public surface. Any route that needs them is blocked at that stage.
+
+A stage skill counts as available only if you can actually read its `SKILL.md`. A partial install or a package filter can hide a bundled stage, so check before relying on one. When a stage you need is missing:
 
 - Mark that stage **blocked: stage skill not installed** in your checklist.
 - Tell the user which stage is missing and what it would have covered.
@@ -24,7 +32,7 @@ A stage skill counts as available only if you can read its `SKILL.md` in a sibli
 
 If another workflow already owns this task, for example a parent session that delegated it to you or a different methodology hub that is running, you are a contributor. Do the bounded part you were given, return its evidence to that owner, and stop. Do not start a competing workflow, re-plan the whole task, or launch children of your own.
 
-Otherwise you coordinate, and children you launch are leaves.
+Otherwise you coordinate, and children you launch are leaves. Stage skills are procedures for one stage. When you read one, follow it for that stage and keep the route, the checklist, and the final report here.
 
 ## Procedure
 

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
 import { PLANNED_SKILLS, SKILLS, skillFiles } from "./inventory.mjs";
@@ -38,6 +38,26 @@ const SCALAR_CASES = [
 	{ dir: "false-invocation", invocation: "false", problems: [] },
 	{ dir: "padded-invocation", invocation: " True  ", problems: [] },
 	{ dir: "padded-quoted-invocation", invocation: ' "true" ', problems: ["disable-model-invocation must be a boolean, found string"] },
+];
+
+function writeSkill(skillsRoot, name, body, files = {}) {
+	const skillDir = join(skillsRoot, name);
+	for (const [path, content] of Object.entries({
+		"SKILL.md": `---\nname: ${name}\ndescription: Generated link case.\ndisable-model-invocation: true\n---\n\n${body}\n`,
+		...files,
+	})) {
+		mkdirSync(dirname(join(skillDir, path)), { recursive: true });
+		writeFileSync(join(skillDir, path), content);
+	}
+	return skillDir;
+}
+
+const SIBLING_CASES = [
+	{ link: "../absent/SKILL.md", problem: "SKILL.md links to a missing sibling skill: ../absent/SKILL.md" },
+	{ link: "../peer/references/inner.md", problem: "SKILL.md links to a sibling skill path other than its SKILL.md: ../peer/references/inner.md" },
+	{ link: "../peer", problem: "SKILL.md links to a sibling skill path other than its SKILL.md: ../peer" },
+	{ link: "../../outside.md", problem: "SKILL.md links outside the skills directory: ../../outside.md" },
+	{ link: "../escape/SKILL.md", problem: "SKILL.md links to a sibling skill that resolves outside the skills directory: ../escape/SKILL.md" },
 ];
 
 function writeScalarCase(root, { dir, name = dir, description = "A plain string description.", invocation = "true" }) {
@@ -81,8 +101,26 @@ describe("skill inventory", () => {
 			it("resolves every local markdown reference to a bundled file", () => {
 				assert.deepEqual(result.references, skill.references.toSorted());
 			});
+
+			it("links exactly its declared sibling skills", () => {
+				assert.deepEqual(result.siblings, skill.siblings.toSorted());
+			});
 		});
 	}
+
+	it("routes the hub to every shipped stage, and no stage back to the hub", () => {
+		const names = SKILLS.map((skill) => skill.name);
+		for (const skill of SKILLS) {
+			for (const sibling of skill.siblings) {
+				assert.ok(names.includes(sibling), `${skill.name} links unshipped ${sibling}`);
+				assert.notEqual(sibling, skill.name);
+			}
+		}
+		const [hub, ...stages] = SKILLS;
+		assert.equal(hub.name, "craft-mode");
+		assert.deepEqual(hub.siblings.toSorted(), stages.map((stage) => stage.name).toSorted());
+		for (const stage of stages) assert.ok(!stage.siblings.includes(hub.name), `${stage.name} links the hub`);
+	});
 
 	it("does not link planned stage skills that are not shipped", () => {
 		for (const path of skillFiles().filter((file) => file.endsWith(".md"))) {
@@ -117,6 +155,38 @@ describe("contract checks reject broken skills", () => {
 			"frontmatter value for description needs quoting to remain plain YAML",
 			"name other-name does not match directory mismatched-name",
 		]);
+	});
+
+	it("records sibling skills separately from owned references without following their files", (t) => {
+		const skills = join(makeTempRoot(t, "siblings"), "skills");
+		writeSkill(skills, "peer", "Read [a missing file](references/absent.md).");
+		writeSkill(skills, "other", "Other skill.");
+		const hub = writeSkill(skills, "hub", "Use [peer](../peer/SKILL.md) and [notes](references/notes.md).", {
+			"references/notes.md": "Then use [other](../../other/SKILL.md).\n",
+		});
+		const result = checkSkill(hub);
+		assert.deepEqual(
+			{ problems: result.problems, references: result.references, siblings: result.siblings },
+			{ problems: [], references: ["references/notes.md"], siblings: ["other", "peer"] },
+		);
+		assert.deepEqual(checkSkill(join(skills, "peer")).problems, ["SKILL.md links to a missing file: references/absent.md"]);
+	});
+
+	it("rejects missing, internal, escaping, and redirected sibling links", (t) => {
+		const root = makeTempRoot(t, "sibling-cases");
+		const skills = join(root, "skills");
+		writeSkill(skills, "peer", "Peer.", { "references/inner.md": "Inner.\n" });
+		writeFileSync(join(root, "outside.md"), "Outside.\n");
+		writeSkill(root, "elsewhere", "Outside the skills directory.");
+		symlinkSync(join(root, "elsewhere"), join(skills, "escape"));
+		const observed = SIBLING_CASES.map(({ link }, index) => {
+			const { problems, siblings } = checkSkill(writeSkill(skills, `probe-${index}`, `See [it](${link}).`));
+			return { link, problem: problems.join("\n"), siblings };
+		});
+		assert.deepEqual(
+			observed,
+			SIBLING_CASES.map((siblingCase) => ({ ...siblingCase, siblings: [] })),
+		);
 	});
 
 	it("keeps YAML core-schema scalar types that Pi sees", (t) => {

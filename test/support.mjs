@@ -14,7 +14,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, delimiter, dirname, join, relative, resolve, sep } from "node:path";
+import { basename, delimiter, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const PACKAGE_ROOT = realpathSync(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
@@ -97,10 +97,22 @@ export function listFiles(root) {
 		.toSorted();
 }
 
+function siblingSkill(skillsRoot, resolved) {
+	const path = relative(skillsRoot, resolved);
+	const [name, ...rest] = path.split(sep);
+	if (name === ".." || isAbsolute(path)) return { problem: "links outside the skills directory" };
+	if (rest.length !== 1 || rest[0] !== "SKILL.md") return { problem: "links to a sibling skill path other than its SKILL.md" };
+	if (!existsSync(resolved) || !statSync(resolved).isFile()) return { problem: "links to a missing sibling skill" };
+	if (relative(realpathSync(skillsRoot), realpathSync(resolved)) !== join(name, "SKILL.md")) {
+		return { problem: "links to a sibling skill that resolves outside the skills directory" };
+	}
+	return { name };
+}
+
 export function checkSkill(skillDir) {
 	const problems = [];
 	const skillFile = join(skillDir, "SKILL.md");
-	if (!existsSync(skillFile)) return { fields: {}, references: [], problems: ["SKILL.md is missing"] };
+	if (!existsSync(skillFile)) return { fields: {}, references: [], siblings: [], problems: ["SKILL.md is missing"] };
 	const text = readFileSync(skillFile, "utf8");
 	const { fields, problems: frontmatterProblems } = parseFrontmatter(text);
 	problems.push(...frontmatterProblems);
@@ -122,6 +134,7 @@ export function checkSkill(skillDir) {
 	}
 
 	const references = new Set();
+	const siblings = new Set();
 	const pending = [skillFile];
 	const visited = new Set();
 	while (pending.length > 0) {
@@ -137,7 +150,9 @@ export function checkSkill(skillDir) {
 			const resolved = resolve(dirname(file), target);
 			const inside = relative(skillDir, resolved);
 			if (inside === "" || inside === ".." || inside.startsWith(`..${sep}`)) {
-				problems.push(`${from} links outside the skill directory: ${target}`);
+				const sibling = siblingSkill(dirname(skillDir), resolved);
+				if (sibling.problem) problems.push(`${from} ${sibling.problem}: ${target}`);
+				else siblings.add(sibling.name);
 				continue;
 			}
 			if (!existsSync(resolved) || !statSync(resolved).isFile()) {
@@ -148,7 +163,7 @@ export function checkSkill(skillDir) {
 			if (resolved.endsWith(".md")) pending.push(resolved);
 		}
 	}
-	return { fields, references: [...references].toSorted(), problems };
+	return { fields, references: [...references].toSorted(), siblings: [...siblings].toSorted(), problems };
 }
 
 export function makeTempRoot(t, label, parent = tmpdir()) {

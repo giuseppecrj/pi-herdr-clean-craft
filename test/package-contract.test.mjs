@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
-import { expectedPackFiles, PACKAGED_DOCS } from "./inventory.mjs";
-import { extractPack, listFiles, localLinkTargets, makeTempRoot, npmPack, PACKAGE_ROOT } from "./support.mjs";
+import { expectedPackFiles, PACKAGED_DOCS, SKILLS } from "./inventory.mjs";
+import { checkSkill, extractPack, listFiles, localLinkTargets, makeTempRoot, npmPack, PACKAGE_ROOT } from "./support.mjs";
 
 const manifest = JSON.parse(readFileSync(join(PACKAGE_ROOT, "package.json"), "utf8"));
 
@@ -29,13 +29,21 @@ const AMBIENT_PACKED = [
 	".audit/phase.md",
 ].toSorted();
 
-function writeAmbientCandidate(t) {
-	const owner = makeTempRoot(t, "ambient");
-	const candidate = join(owner, "candidate");
-	for (const [path, content] of Object.entries(AMBIENT_CANDIDATE)) {
+function writeCandidate(candidate, files) {
+	for (const [path, content] of Object.entries(files)) {
 		mkdirSync(dirname(join(candidate, path)), { recursive: true });
 		writeFileSync(join(candidate, path), content);
 	}
+}
+
+function generatedSkill(name, body) {
+	return `---\nname: ${name}\ndescription: Generated packing case.\ndisable-model-invocation: true\n---\n\n${body}\n`;
+}
+
+function writeAmbientCandidate(t) {
+	const owner = makeTempRoot(t, "ambient");
+	const candidate = join(owner, "candidate");
+	writeCandidate(candidate, AMBIENT_CANDIDATE);
 	const redirectedLogs = join(owner, "redirected-logs");
 	writeFileSync(join(candidate, ".npmrc"), `logs-dir=${redirectedLogs}\n`);
 	return { candidate, redirectedLogs };
@@ -126,6 +134,36 @@ describe("npm pack --dry-run", () => {
 				assert.ok(packed.has(resolved), `${doc} links to ${target}, which is not packaged`);
 			}
 		}
+	});
+});
+
+describe("packed skill links", () => {
+	it("resolve to the same owned references and sibling skills in the extracted tarball", async (t) => {
+		const packageRoot = await extractPack(await npmPack(t, { dryRun: false }));
+		for (const skill of SKILLS) {
+			const { problems, references, siblings } = checkSkill(join(packageRoot, dirname(skill.path)));
+			assert.deepEqual(
+				{ problems, references, siblings },
+				{ problems: [], references: skill.references.toSorted(), siblings: skill.siblings.toSorted() },
+				skill.name,
+			);
+		}
+	});
+
+	it("report a linked sibling skill that the allowlist leaves out of the tarball", async (t) => {
+		const candidate = join(makeTempRoot(t, "sibling-candidate"), "candidate");
+		writeCandidate(candidate, {
+			"package.json": `${JSON.stringify({ name: "sibling-candidate", version: "0.0.0", private: true, files: ["skills/hub/SKILL.md"] })}\n`,
+			"skills/hub/SKILL.md": generatedSkill("hub", "Continue with [peer](../peer/SKILL.md)."),
+			"skills/peer/SKILL.md": generatedSkill("peer", "Peer."),
+		});
+		const source = checkSkill(join(candidate, "skills", "hub"));
+		assert.deepEqual({ problems: source.problems, siblings: source.siblings }, { problems: [], siblings: ["peer"] });
+		const packageRoot = await extractPack(await npmPack(t, { dryRun: false, candidateRoot: candidate }));
+		assert.deepEqual(listFiles(packageRoot), ["package.json", "skills/hub/SKILL.md"]);
+		assert.deepEqual(checkSkill(join(packageRoot, "skills", "hub")).problems, [
+			"SKILL.md links to a missing sibling skill: ../peer/SKILL.md",
+		]);
 	});
 });
 

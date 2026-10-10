@@ -6,23 +6,33 @@ The pack supplies instructions only. Child execution comes from [pi-herdr-agents
 
 ## Status
 
-Pre-release scaffold, version 0.0.0, not published. It ships one skill:
+Pre-release, version 0.0.0, not published. It ships six skills:
 
 | Skill | Purpose |
 | --- | --- |
-| `craft-mode` | Hub that scopes a task, picks a workflow, and reports evidence. It routes to stage skills that are not yet included, and reports each missing stage as blocked rather than improvising it. |
+| `craft-mode` | Hub that scopes a task, picks a workflow, and reports evidence. It routes to the five stage skills below and reports any missing stage as blocked rather than improvising it. |
+| `craft-tdd` | Changes behavior test-first, starting from a test that fails for the predicted reason. |
+| `craft-refactor` | Improves structure without changing behavior, in small steps from a green baseline. |
+| `craft-architecture` | Reviews dependency and policy boundaries from observed edges. Read-only by default. |
+| `craft-quality` | Assesses risk from qualified measurements and discloses missing or stale data. Report-only by default. |
+| `craft-mutation` | Checks whether tests notice seeded source changes, and verifies that the source is restored. |
 
-The stage skills (craft-tdd, craft-refactor, craft-architecture, craft-quality, craft-mutation, craft-spec, and craft-qa) are planned and not part of this release. There is no sticky mode command.
+The lightweight change, refactor, architecture review, quality audit, and mutation routes are complete. The specification and final QA stage skills, craft-spec and craft-qa, are planned and not part of this release, so the full feature route is blocked at those stages. No external quality analyzer is supported, and there is no sticky mode command.
 
 ## Use
 
-Skills in this pack load only on explicit request:
+Skills in this pack load only on explicit request. Start with the hub, or call a stage directly for one bounded job:
 
 ```text
 /skill:craft-mode Fix the parser's empty-input behavior
+/skill:craft-tdd Add retry-limit behavior
+/skill:craft-refactor Simplify the billing calculation without changing results
+/skill:craft-architecture Review domain-to-storage dependencies
+/skill:craft-quality Assess the changed files; report only
+/skill:craft-mutation Check assertions around the retry policy
 ```
 
-Loading the skill grants no permission to commit, install, publish, or change settings.
+Loading a skill grants no permission to commit, install, publish, or change settings. A stage skill invoked under another coordinator does its bounded part and returns evidence. It does not start a competing workflow.
 
 ## Installation
 

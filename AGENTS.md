@@ -13,6 +13,7 @@ This file is for people and agents changing the pack. It is not packaged.
 ## Package
 
 - `package.json` lists every packaged file exactly. When you add a skill or reference, update `files` and the inventory in `test/inventory.mjs` together.
+- A skill may link another shipped skill only at `../<name>/SKILL.md`. List each such link in that skill's `siblings` in the inventory. Sibling links never add packaged files.
 - Do not add dependencies, an extension, or install and lifecycle scripts without a phase that needs them.
 - Planning documents, the `.audit` directory, this file, tests, fixtures, local settings, and evidence stay out of the tarball.
 

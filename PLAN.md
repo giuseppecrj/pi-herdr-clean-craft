@@ -1,6 +1,6 @@
 # pi-herdr-clean-craft — implementation plan
 
-Status: Phases 0 and 1 completed on 2026-10-10 for the original-prose scaffold. Phase 2 is next. Local gate evidence is in `.audit/phase-0.md` and `.audit/phase-1.md`; the decision trail is `.audit/decisions.tsv`. Only the `craft-mode` hub scaffold ships. The six-skill core and later runtime/evaluation gates are not complete.
+Status: Phases 0 and 1 completed on 2026-10-10 and were committed as `a66de72484f3368f7034048cfe8b20a32c256a12`. Phase 2 passed its local gate on 2026-10-10 after cross-family review and verified corrections. Its six-skill core is complete. Local evidence is in `.audit/phase-0.md`, `.audit/phase-1.md`, and `.audit/phase-2.md`; the decision trail is `.audit/decisions.tsv`. Phase 3 host/coexistence and later evaluation/release gates remain incomplete.
 
 Research date: 2026-10-10.
 
@@ -601,6 +601,8 @@ Deliver:
 
 Gate: static/discovery tests pass; deterministic fixture tests establish expected red/green outcomes, behavior-preserving transformations, dependency violations, and mutation results. This proves the fixture and tool contracts, not live-model adherence. For any supported upstream mutator recipe, verify sibling-crapper preflight and source restoration after normal and interrupted runs. Unsupported analyzers are clearly marked; no fabricated metrics or hidden installs.
 
+Result on 2026-10-10: pass for this phase's selected original-content scope. The suite passed 65 tests with 3 later-gate TODOs. The 18 fixture tests passed twice; counterfactual controls showed both reviewed regressions are detected. Source and tarball Pi discovery passed, and the tarball contains exactly 21 allowlisted files. See `.audit/phase-2.md` for review, restoration, diagnostics, and remaining limits. No upstream analyzer is supported or claimed.
+
 This is the first useful core milestone, not yet a publishable candidate by itself. A six-skill release must also pass Phase 3 and the applicable Phase 6 evaluations and release checks; it can defer Phases 4 and 5 while accurately declaring the smaller shipped scope. Releasing remains separately authorized.
 
 ### Phase 3 — host orchestration and coexistence
@@ -714,4 +716,4 @@ These do not block writing original skills; settle them before the relevant impl
 
 ## 17. Immediate next action
 
-Begin Phase 2, the six-skill core, from the verified Phase 1 scaffold. Read `.audit/phase-1.md` for the gate evidence and remaining limitations, and `docs/provenance.md` for source decisions. The current suite passes 21 tests with three later gates explicitly unmeasured. Real local-source installation passed in temporary Pi environments. No operator installation, publication, or compatibility certification followed. Keep dependent writes sequential and retain the existing package/discovery checks. Do not copy SwarmForge runtime scripts or treat this plan as permission to install tools, initialize remote infrastructure, or publish a package.
+Phase 2 is verified. The next implementation unit is Phase 3, host orchestration and coexistence. Read `.audit/phase-2.md` and `.audit/phase2-implementation-review.md` for the evidence and limitations, and `docs/provenance.md` for source decisions. The current suite passes 65 tests with three later gates explicitly unmeasured. Phase 3 must exercise real host prompt delivery and fresh-child resource resolution rather than treating fixture results as integration evidence. Keep dependent writes sequential and preserve test-owned settings isolation. No operator installation, publication, or compatibility certification has occurred. Do not copy upstream runtime scripts or treat this plan as permission to install tools, initialize remote infrastructure, publish, or remove the retained design worktrees.

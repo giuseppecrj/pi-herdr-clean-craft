@@ -2,7 +2,7 @@
 	"name": "pi-herdr-clean-craft",
 	"version": "0.0.0",
 	"private": true,
-	"description": "Unofficial Pi methodology pack inspired by Robert C. Martin's engineering practices. Pre-release scaffold: only the craft-mode hub ships.",
+	"description": "Unofficial Pi methodology pack inspired by Robert C. Martin's engineering practices. Pre-release: the craft-mode hub and five stage skills ship; specification and final QA stages are planned.",
 	"keywords": ["pi-package", "pi", "herdr", "tdd", "refactoring", "clean-code"],
 	"license": "MIT",
 	"author": {
@@ -21,7 +21,16 @@
 		"skills/craft-mode/references/authorization.md",
 		"skills/craft-mode/references/delegation.md",
 		"skills/craft-mode/references/reporting.md",
-		"skills/craft-mode/references/workflows.md"
+		"skills/craft-mode/references/workflows.md",
+		"skills/craft-tdd/SKILL.md",
+		"skills/craft-refactor/SKILL.md",
+		"skills/craft-refactor/references/test-quality.md",
+		"skills/craft-architecture/SKILL.md",
+		"skills/craft-architecture/references/design-principles.md",
+		"skills/craft-quality/SKILL.md",
+		"skills/craft-quality/references/tool-recipes.md",
+		"skills/craft-mutation/SKILL.md",
+		"skills/craft-mutation/references/interpretation.md"
 	],
 	"scripts": {
 		"test": "node --test --test-concurrency=1 test/*.test.mjs"

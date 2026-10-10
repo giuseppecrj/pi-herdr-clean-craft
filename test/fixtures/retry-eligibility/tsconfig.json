@@ -1,0 +1,22 @@
+{
+	"compilerOptions": {
+		"target": "esnext",
+		"module": "nodenext",
+		"moduleResolution": "nodenext",
+		"strict": true,
+		"noEmit": true,
+		"allowImportingTsExtensions": true,
+		"erasableSyntaxOnly": true,
+		"verbatimModuleSyntax": true,
+		"types": [],
+		"rootDirs": [
+			"base",
+			"variants/defect",
+			"variants/load-failure",
+			"variants/refactor",
+			"variants/leaky-domain",
+			"mutants/boundary"
+		]
+	},
+	"include": ["**/*.ts"]
+}
