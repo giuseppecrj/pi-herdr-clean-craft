@@ -63,10 +63,7 @@ const SIBLING_CASES = [
 function writeScalarCase(root, { dir, name = dir, description = "A plain string description.", invocation = "true" }) {
 	const skillDir = join(root, dir);
 	mkdirSync(skillDir, { recursive: true });
-	writeFileSync(
-		join(skillDir, "SKILL.md"),
-		`---\nname: ${name}\ndescription: ${description}\ndisable-model-invocation: ${invocation}\n---\n\nBody.\n`,
-	);
+	writeFileSync(join(skillDir, "SKILL.md"), `---\nname: ${name}\ndescription: ${description}\ndisable-model-invocation: ${invocation}\n---\n\nBody.\n`);
 	return skillDir;
 }
 
@@ -79,7 +76,12 @@ describe("skill inventory", () => {
 			.map((entry) => entry.name)
 			.toSorted();
 		assert.deepEqual(dirs, names.toSorted());
-		assert.deepEqual(listFiles(join(PACKAGE_ROOT, "skills")), skillFiles().map((path) => path.slice("skills/".length)).toSorted());
+		assert.deepEqual(
+			listFiles(join(PACKAGE_ROOT, "skills")),
+			skillFiles()
+				.map((path) => path.slice("skills/".length))
+				.toSorted(),
+		);
 	});
 
 	for (const skill of SKILLS) {
@@ -151,10 +153,7 @@ describe("contract checks reject broken skills", () => {
 
 	it("reports a name that differs from its directory and an unportable value", () => {
 		const { problems } = checkSkill(join(FIXTURES, "mismatched-name"));
-		assert.deepEqual(problems, [
-			"frontmatter value for description needs quoting to remain plain YAML",
-			"name other-name does not match directory mismatched-name",
-		]);
+		assert.deepEqual(problems, ["frontmatter value for description needs quoting to remain plain YAML", "name other-name does not match directory mismatched-name"]);
 	});
 
 	it("records sibling skills separately from owned references without following their files", (t) => {
@@ -165,10 +164,7 @@ describe("contract checks reject broken skills", () => {
 			"references/notes.md": "Then use [other](../../other/SKILL.md).\n",
 		});
 		const result = checkSkill(hub);
-		assert.deepEqual(
-			{ problems: result.problems, references: result.references, siblings: result.siblings },
-			{ problems: [], references: ["references/notes.md"], siblings: ["other", "peer"] },
-		);
+		assert.deepEqual({ problems: result.problems, references: result.references, siblings: result.siblings }, { problems: [], references: ["references/notes.md"], siblings: ["other", "peer"] });
 		assert.deepEqual(checkSkill(join(skills, "peer")).problems, ["SKILL.md links to a missing file: references/absent.md"]);
 	});
 

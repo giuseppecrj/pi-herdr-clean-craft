@@ -3,18 +3,7 @@ import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { after, describe, it } from "node:test";
 import { ADAPTER_CASES, DOMAIN_CASES } from "./fixtures/retry-eligibility/base/tests/cases.mjs";
-import {
-	diffWorkspace,
-	FIXTURE_ROOT,
-	loadFixture,
-	materialize,
-	mutantTrial,
-	readSnapshot,
-	release,
-	runWorker,
-	sha256,
-	writeMutant,
-} from "./fixture-workspace.mjs";
+import { diffWorkspace, FIXTURE_ROOT, loadFixture, materialize, mutantTrial, readSnapshot, release, runWorker, sha256, writeMutant } from "./fixture-workspace.mjs";
 import { makeTempRoot } from "./support.mjs";
 
 const BEHAVIOR = "tests/behavior.test.mjs";
@@ -136,9 +125,7 @@ describe("retry fixture: seeded boundary mutant", () => {
 		assertEvaluated(trial.mutated, DOMAIN, trial.mutant.bytes());
 		assert.deepEqual(failures(trial.mutated, WEAK), []);
 		assert.deepEqual(passed(trial.mutated, WEAK), ["stops after too many attempts", "returns a decision at the limit"]);
-		assert.deepEqual(failures(trial.mutated, BEHAVIOR), [
-			{ name: BOUNDARY, kind: "assertion", actual: "retry", expected: "stop" },
-		]);
+		assert.deepEqual(failures(trial.mutated, BEHAVIOR), [{ name: BOUNDARY, kind: "assertion", actual: "retry", expected: "stop" }]);
 		assert.deepEqual(failures(trial.final), []);
 		assert.deepEqual(passed(trial.final, BEHAVIOR), BEHAVIOR_NAMES);
 		assert.deepEqual(diffWorkspace(trial.workspace.dir, fixture.base), []);
@@ -180,7 +167,10 @@ describe("retry fixture: harness negative controls", () => {
 	it("retains a workspace whose contents cannot be verified", (t) => {
 		const workspace = materialize(t, fixture.base, makeTempRoot(t, "retain"));
 		writeFileSync(join(workspace.dir, "src/stray.ts"), "");
-		assert.throws(() => release(workspace), (error) => error.message.endsWith(`retained ${workspace.root}`));
+		assert.throws(
+			() => release(workspace),
+			(error) => error.message.endsWith(`retained ${workspace.root}`),
+		);
 		assert.ok(existsSync(join(workspace.dir, "src/stray.ts")));
 		rmSync(join(workspace.dir, "src/stray.ts"));
 		release(workspace);

@@ -25,7 +25,13 @@ import { makeTempRoot, PACKAGE_ROOT } from "./support.mjs";
 const CANDIDATE = "/owned/candidate";
 const ARTIFACTS = "/owned/sessions/artifacts/session";
 const PARENT = Object.freeze({ kind: "parent", label: "parent" });
-const NONCES = ["C3N-00000000000000000000000000000001", "C3N-00000000000000000000000000000002", "C3N-00000000000000000000000000000003", "C3N-00000000000000000000000000000004", "C3N-00000000000000000000000000000005"];
+const NONCES = [
+	"C3N-00000000000000000000000000000001",
+	"C3N-00000000000000000000000000000002",
+	"C3N-00000000000000000000000000000003",
+	"C3N-00000000000000000000000000000004",
+	"C3N-00000000000000000000000000000005",
+];
 
 function child(name, detached = false) {
 	return { kind: "host-child", subagentName: name, herdrSession: "owned", detached };
@@ -183,7 +189,12 @@ describe("fresh resource evidence", () => {
 		const calls = paths(table.reads).map((path, index) => ({ id: `call_read_${index}`, name: "read", arguments: { path } }));
 		const first = [user(`${artifact(args)}${leak ? files[table.reads[0]] : ""}`)];
 		record.push(request(child(args.name), first, { reply: toolReply("", calls) }));
-		record.push(request(child(args.name), [...first, assistant("", calls), ...calls.map((call, index) => tool(call.id, result(files[table.reads[index]])))], { minted: NONCES[0], reply: textReply(`RESULT ${NONCES[0]}`) }));
+		record.push(
+			request(child(args.name), [...first, assistant("", calls), ...calls.map((call, index) => tool(call.id, result(files[table.reads[index]])))], {
+				minted: NONCES[0],
+				reply: textReply(`RESULT ${NONCES[0]}`),
+			}),
+		);
 		return baseEvidence(table, record, { canonical: { files } });
 	}
 
@@ -311,7 +322,11 @@ describe("host skills argument evidence", () => {
 			evidence((record, args) => {
 				record.push(request(child(args.name), [user(artifact(args))], { minted: NONCES[0], reply: textReply(`RESULT ${NONCES[0]}`) }));
 				record.result(args.name, resultText(args.name, `RESULT ${NONCES[0]}`));
-				const late = request({ kind: "unknown", reason: "sender exiting", provenConnection: { kind: "host-child", subagentName: args.name } }, [user(artifact(args)), assistant(`RESULT ${NONCES[0]}`), user(block)]);
+				const late = request({ kind: "unknown", reason: "sender exiting", provenConnection: { kind: "host-child", subagentName: args.name } }, [
+					user(artifact(args)),
+					assistant(`RESULT ${NONCES[0]}`),
+					user(block),
+				]);
 				record.push({ ...late, refused: "unattributed request: sender exiting" });
 			}),
 		);
@@ -332,7 +347,19 @@ describe("host skills argument evidence", () => {
 
 describe("isolation and teardown evidence", () => {
 	const parentChecks = { identity: true, executable: true, rootSender: true, noSubagentId: true, noRiskyNames: true };
-	const childChecks = { identity: true, executable: true, serverDescendant: true, subagentId: true, subagentName: true, herdrSession: true, herdrSocket: true, pane: true, agentDir: true, offline: true, noRiskyNames: true };
+	const childChecks = {
+		identity: true,
+		executable: true,
+		serverDescendant: true,
+		subagentId: true,
+		subagentName: true,
+		herdrSession: true,
+		herdrSocket: true,
+		pane: true,
+		agentDir: true,
+		offline: true,
+		noRiskyNames: true,
+	};
 	const attributedParent = { kind: "parent", label: "parent", basis: "owned-tree", riskyNames: [], checks: parentChecks };
 	const attributedChild = (fields = {}) => ({ kind: "host-child", subagentName: "child", herdrSession: "owned", basis: "owned-tree", detached: false, riskyNames: [], checks: childChecks, ...fields });
 	const received = (index, origin) => ({ index, origin, auth: "dummy", refused: null });

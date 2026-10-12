@@ -1,0 +1,7 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"ignorePatterns": [".audit/**", ".pi/**", "node_modules/**", "test/fixtures/**"],
+	"categories": {
+		"correctness": "error"
+	}
+}

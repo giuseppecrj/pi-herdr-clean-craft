@@ -1,18 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { appendFileSync } from "node:fs";
-import { assertReady, RELEASE_BLOCKERS } from "./readiness.mjs";
-import {
-	compareVersions,
-	isEntryPoint,
-	PACKAGE_NAME,
-	parseVersion,
-	REPOSITORY,
-	refuse,
-	requireMainRef,
-	requireSha,
-	requireStableVersion,
-	runMain,
-} from "./lib.mjs";
+import { compareVersions, isEntryPoint, PACKAGE_NAME, parseVersion, REPOSITORY, refuse, requireMainRef, requireSha, requireStableVersion, runMain } from "./lib.mjs";
 
 const SECRET_NAMES = new Set(["NODE_AUTH_TOKEN", "BOOTSTRAP_NPM_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"]);
 const REGISTRY_STATES = new Set(["absent", "version-absent", "same-commit-published"]);
@@ -96,7 +84,8 @@ function remoteTag(run, tag, credentials) {
 
 function requireRemoteTagAt({ tag, sha }, current) {
 	if (current === sha) return;
-	if (current === null) refuse(`Tag ${tag} disappeared from the remote after it was checked. It was not pushed again, and no GitHub Release was created or reused. Inspect the remote before rerunning.`);
+	if (current === null)
+		refuse(`Tag ${tag} disappeared from the remote after it was checked. It was not pushed again, and no GitHub Release was created or reused. Inspect the remote before rerunning.`);
 	refuse(`Remote tag ${tag} now points to ${current}, not ${sha}, after it was checked. Tags are never moved, and no GitHub Release was created or reused. Resolve the tag by hand before rerunning.`);
 }
 
@@ -115,8 +104,7 @@ function releaseState(run, tag, credentials) {
 	return "present";
 }
 
-export function runRelease({ cwd, env, blockers, stdio = "inherit", say = console.log }) {
-	assertReady(blockers);
+export function runRelease({ cwd, env, stdio = "inherit", say = console.log }) {
 	const run = commandRunner({ cwd, env, stdio, say });
 	const tuple = validateTuple(env, run);
 	const plan = publicationPlan(tuple.registry, env.BOOTSTRAP_NPM_TOKEN);
@@ -184,5 +172,5 @@ export function runRelease({ cwd, env, blockers, stdio = "inherit", say = consol
 }
 
 if (isEntryPoint(import.meta)) {
-	await runMain(() => runRelease({ cwd: process.cwd(), env: process.env, blockers: RELEASE_BLOCKERS }));
+	await runMain(() => runRelease({ cwd: process.cwd(), env: process.env }));
 }

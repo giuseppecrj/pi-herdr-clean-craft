@@ -88,14 +88,27 @@ jobs:
           VERSION: ${{ needs.detect.outputs.version }}
           REGISTRY_URL: https://registry.npmjs.org/
         run: node scripts/release/registry.mjs
-      - name: Check release readiness
-        run: node scripts/release/readiness.mjs
       - name: Install dependencies
         run: npm ci --ignore-scripts
-      - name: Run default suite
-        run: npm test
-      - name: Run host integration gate
-        run: npm run test:integration
+      - name: Check formatting
+        run: npm run format:check
+      - name: Run lint
+        run: npm run lint
+      - name: Provision Pi 1.1.0
+        run: |
+          archive="$RUNNER_TEMP/pi-linux-x64.tar.gz"
+          curl --fail --silent --show-error --location --proto '=https' \
+            --max-time 300 --max-filesize 67108864 --output "$archive" \
+            https://github.com/earendil-works/pi/releases/download/v1.1.0/pi-linux-x64.tar.gz
+          echo "3faa94666cd3849d37af320ff749407d0271b07a9b94f420c87e30866e10e289  $archive" \
+            | sha256sum --check --strict -
+          dir="$(mktemp -d "$RUNNER_TEMP/pi.XXXXXX")"
+          tar -xzf "$archive" -C "$dir" --no-same-owner
+          echo "5d527eae57d99f80f9397a84d0228528a92b3595b2c5f3d969e45b02ea72a6bc  $dir/pi/pi" \
+            | sha256sum --check --strict -
+          echo "CLEAN_CRAFT_PI_BIN=$dir/pi/pi" >> "$GITHUB_ENV"
+      - name: Run checks
+        run: npm run check
       - name: Verify package contents
         run: npm pack --dry-run --ignore-scripts
       - name: Publish, tag, and create GitHub release

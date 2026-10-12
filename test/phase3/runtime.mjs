@@ -283,7 +283,7 @@ export function createRuntime({ pi, herdr, boundaries = {} }) {
 	}
 
 	async function run(command, args, step) {
-		const { closed, ...result } = await runBounded({ command, args, cwd: paths.work, env, limit: deadline(15_000, step) });
+		const { closed: _closed, ...result } = await runBounded({ command, args, cwd: paths.work, env, limit: deadline(15_000, step) });
 		commands.push(Object.freeze({ argv: [command, ...args], ...result }));
 		return result;
 	}
@@ -313,9 +313,9 @@ export function createRuntime({ pi, herdr, boundaries = {} }) {
 	function unresolvedCommands() {
 		const bounded = [...commands, ...herdrInstance.commands]
 			.filter((command) => command.closure !== "closed")
-			.map((command) => Object.freeze({ ...(command.identity ?? {}), label: command.argv.join(" "), reason: `command closure ${command.closure}${command.identity ? "" : `; ${command.identityProblem}`}` }));
+			.map((command) => Object.freeze({ ...command.identity, label: command.argv.join(" "), reason: `command closure ${command.closure}${command.identity ? "" : `; ${command.identityProblem}`}` }));
 		const staged = unresolvedUnder(root).map((entry) =>
-			Object.freeze({ ...(entry.identity ?? {}), label: entry.argv.join(" "), reason: `command closure unresolved: ${entry.reason}${entry.identity ? "" : `; ${entry.identityProblem}`}` }),
+			Object.freeze({ ...entry.identity, label: entry.argv.join(" "), reason: `command closure unresolved: ${entry.reason}${entry.identity ? "" : `; ${entry.identityProblem}`}` }),
 		);
 		return [...bounded, ...staged];
 	}

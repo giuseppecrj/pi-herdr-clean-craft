@@ -64,8 +64,7 @@ function mutant(base, overlay, name) {
 
 export function loadFixture(root = FIXTURE_ROOT) {
 	const base = readSnapshot("base", join(root, "base"));
-	const load = (kind, build) =>
-		new Map(subdirectories(join(root, kind)).map((name) => [name, build(base, readSnapshot(name, join(root, kind, name)), name)]));
+	const load = (kind, build) => new Map(subdirectories(join(root, kind)).map((name) => [name, build(base, readSnapshot(name, join(root, kind, name)), name)]));
 	const variants = load("variants", variant);
 	const mutants = load("mutants", mutant);
 	const pick = (kind, states, name) => {
@@ -85,9 +84,7 @@ export function diffWorkspace(dir, expected) {
 	return [
 		...expected.paths.filter((path) => !actual.includes(path)).map((path) => `missing ${path}`),
 		...actual.filter((path) => !expected.paths.includes(path)).map((path) => `extra ${path}`),
-		...actual
-			.filter((path) => expected.paths.includes(path) && !readFileSync(join(dir, path)).equals(expected.bytes(path)))
-			.map((path) => `changed ${path}`),
+		...actual.filter((path) => expected.paths.includes(path) && !readFileSync(join(dir, path)).equals(expected.bytes(path))).map((path) => `changed ${path}`),
 	];
 }
 
@@ -151,12 +148,7 @@ export function runWorker(workspace, { tests, ending = "complete", timeoutMs = 3
 				reject(new Error(`fixture worker exceeded ${timeoutMs} ms\nstderr:\n${stderr}`));
 				return;
 			}
-			const observed =
-				results !== undefined && code === 0
-					? "complete"
-					: interrupted && signal === "SIGKILL" && results === undefined
-						? "interrupted"
-						: "worker-error";
+			const observed = results !== undefined && code === 0 ? "complete" : interrupted && signal === "SIGKILL" && results === undefined ? "interrupted" : "worker-error";
 			resolvePromise({ ending: observed, ready, results, code, signal, stderr });
 		});
 	});

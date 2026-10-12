@@ -23,11 +23,7 @@ function role(roleMarker, purpose) {
 
 export function createScenarioTable({ candidateRoot, cwd }) {
 	const tag = randomBytes(3).toString("hex");
-	const reads = [
-		join(candidateRoot, "skills/craft-mode/SKILL.md"),
-		join(candidateRoot, "skills/craft-mode/references/delegation.md"),
-		join(candidateRoot, "skills/craft-tdd/SKILL.md"),
-	];
+	const reads = [join(candidateRoot, "skills/craft-mode/SKILL.md"), join(candidateRoot, "skills/craft-mode/references/delegation.md"), join(candidateRoot, "skills/craft-tdd/SKILL.md")];
 	const child = (key, { fork, purpose, task, skills }) => {
 		const roleMarker = marker("ROLE");
 		const taskMarker = marker("TASK");
@@ -132,7 +128,12 @@ export function childReply(entry, request, mint) {
 	if (!tasked) return { reply: textReply("STARTUP-ACK") };
 	if (entry.key !== "resources") return { reply: textReply(`RESULT ${mint()}`) };
 	const paths = fresh.flatMap((turn) => [...turn.text.matchAll(/^READ (\/\S+)$/gm)].map((match) => match[1]));
-	return { reply: toolReply("", paths.map((path, index) => call(`call_read_${index}`, "read", { path }))) };
+	return {
+		reply: toolReply(
+			"",
+			paths.map((path, index) => call(`call_read_${index}`, "read", { path })),
+		),
+	};
 }
 
 export function soloReply(label, request, context) {

@@ -88,14 +88,25 @@ function assertRefused(result, pattern) {
 }
 
 describe("release detection: the actual manifest", () => {
-	it("keeps the current private 0.0.0 manifest out of release on push and dispatch", async (t) => {
-		const actual = readFileSync(join(PACKAGE_ROOT, "package.json"), "utf8");
-		const parsed = JSON.parse(actual);
-		assert.equal(parsed.version, "0.0.0");
-		assert.equal(parsed.private, true);
-		assertSkip(await detect(t, { previous: actual, current: actual }), "private");
-		assertSkip(await detect(t, { event: "workflow_dispatch", current: actual }), "private");
-		assertSkip(await detect(t, { previous: manifest("0.0.0"), current: actual }), "private");
+	const actual = readFileSync(join(PACKAGE_ROOT, "package.json"), "utf8");
+	const parsed = JSON.parse(actual);
+	const predecessor = `${JSON.stringify({ ...parsed, version: "0.0.0", private: true }, null, "\t")}\n`;
+
+	it("is the public 0.1.0 manifest", () => {
+		assert.equal(parsed.version, "0.1.0");
+		assert.equal(parsed.private, undefined);
+	});
+
+	it("makes the push from the private 0.0.0 predecessor a candidate", async (t) => {
+		assertCandidate(await detect(t, { previous: predecessor, current: actual }), "0.1.0", "version-increase");
+	});
+
+	it("skips a later push that keeps the same public version", async (t) => {
+		assertSkip(await detect(t, { previous: actual, current: actual }), "unchanged");
+	});
+
+	it("makes a main-branch dispatch a candidate", async (t) => {
+		assertCandidate(await detect(t, { event: "workflow_dispatch", current: actual }), "0.1.0", "dispatch");
 	});
 });
 
@@ -139,20 +150,12 @@ describe("release detection: candidates", () => {
 
 	it("releases the core version after its prerelease", async (t) => {
 		assertCandidate(await detect(t, { previous: manifest("0.1.0-rc.1"), current: manifest("0.1.0") }), "0.1.0", "prerelease-to-core");
-		assertCandidate(
-			await detect(t, { previous: manifest("0.1.0-experimental.0", { private: true }), current: manifest("0.1.0") }),
-			"0.1.0",
-			"prerelease-to-core",
-		);
+		assertCandidate(await detect(t, { previous: manifest("0.1.0-experimental.0", { private: true }), current: manifest("0.1.0") }), "0.1.0", "prerelease-to-core");
 	});
 
 	it("compares numeric parts without losing precision", async (t) => {
 		// Both values round to the same IEEE double, so a Number comparison would call them equal.
-		assertCandidate(
-			await detect(t, { previous: manifest("9007199254740992.0.0"), current: manifest("9007199254740993.0.0") }),
-			"9007199254740993.0.0",
-			"version-increase",
-		);
+		assertCandidate(await detect(t, { previous: manifest("9007199254740992.0.0"), current: manifest("9007199254740993.0.0") }), "9007199254740993.0.0", "version-increase");
 		assertRefused(await detect(t, { previous: manifest("1.0.9007199254740993"), current: manifest("1.0.9007199254740992") }), /lower/);
 	});
 
@@ -197,10 +200,7 @@ describe("release detection: refusals", () => {
 
 	it("refuses another package name, including one that would inject outputs", async (t) => {
 		assertRefused(await detect(t, { event: "workflow_dispatch", current: { name: "other-package", version: "1.0.0" } }), /name/);
-		assertRefused(
-			await detect(t, { event: "workflow_dispatch", current: { name: `${NAME}\ndecision=candidate`, version: "1.0.0" } }),
-			/name/,
-		);
+		assertRefused(await detect(t, { event: "workflow_dispatch", current: { name: `${NAME}\ndecision=candidate`, version: "1.0.0" } }), /name/);
 		assertRefused(await detect(t, { event: "workflow_dispatch", current: manifest("1.0.0", { private: "true" }) }), /private/);
 	});
 

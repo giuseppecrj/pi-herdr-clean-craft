@@ -1,13 +1,4 @@
-import {
-	isEntryPoint,
-	PACKAGE_NAME,
-	Refusal,
-	refuse,
-	requireSha,
-	requireStableVersion,
-	runMain,
-	writeOutputs,
-} from "./lib.mjs";
+import { isEntryPoint, PACKAGE_NAME, Refusal, refuse, requireSha, requireStableVersion, runMain, writeOutputs } from "./lib.mjs";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 const MAX_BYTES = 8 * 1024 * 1024;
@@ -87,9 +78,7 @@ export async function checkRegistry(env) {
 	}
 	if (published.gitHead !== sha) {
 		const gitHead = typeof published.gitHead === "string" ? published.gitHead : "missing";
-		refuse(
-			`${PACKAGE_NAME}@${version} is already published from gitHead ${gitHead}, not ${sha}. Refusing to tag or create a GitHub Release for it. Increase the version instead.`,
-		);
+		refuse(`${PACKAGE_NAME}@${version} is already published from gitHead ${gitHead}, not ${sha}. Refusing to tag or create a GitHub Release for it. Increase the version instead.`);
 	}
 	return "same-commit-published";
 }

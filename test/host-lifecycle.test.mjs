@@ -245,7 +245,10 @@ describe("kernel observations keep unknown apart from gone", () => {
 		const self = kernel.identify(process.pid, "controller");
 		assert.equal(self.state, "present");
 		assert.equal(kernel.observe(self.identity).state, "present");
-		const denial = await underKernelFaults((path) => (path === `/proc/${process.pid}/stat` ? denied(path) : undefined), () => kernel.observe(self.identity));
+		const denial = await underKernelFaults(
+			(path) => (path === `/proc/${process.pid}/stat` ? denied(path) : undefined),
+			() => kernel.observe(self.identity),
+		);
 		assert.equal(denial.state, "unknown");
 		assert.match(denial.reason, /EACCES/);
 		const child = spawn(NODE, ["-e", ""], { stdio: "ignore" });
@@ -258,7 +261,8 @@ describe("kernel observations keep unknown apart from gone", () => {
 	it("reports unreadable descriptors, environments, socket tables and trees as unknown", async () => {
 		requireProc();
 		const self = kernel.identify(process.pid, "controller").identity;
-		const fault = (path) => (path === `/proc/${process.pid}/fd` || path === `/proc/${process.pid}/environ` || path === "/proc/net/tcp" || path.startsWith(`/proc/${process.pid}/task`) ? denied(path) : undefined);
+		const fault = (path) =>
+			path === `/proc/${process.pid}/fd` || path === `/proc/${process.pid}/environ` || path === "/proc/net/tcp" || path.startsWith(`/proc/${process.pid}/task`) ? denied(path) : undefined;
 		const observed = await underKernelFaults(fault, () => ({
 			sockets: kernel.socketInodes(process.pid),
 			environment: kernel.environOf(process.pid),
@@ -305,7 +309,10 @@ describe("kernel observations keep unknown apart from gone", () => {
 	it("treats a descriptor that closes during enumeration as an ordinary race", async () => {
 		requireProc();
 		const [first] = readdirSync(`/proc/${process.pid}/fd`);
-		const raced = await underKernelFaults((path, method) => (method === "readlinkSync" && path === `/proc/${process.pid}/fd/${first}` ? missing(path) : undefined), () => kernel.socketInodes(process.pid));
+		const raced = await underKernelFaults(
+			(path, method) => (method === "readlinkSync" && path === `/proc/${process.pid}/fd/${first}` ? missing(path) : undefined),
+			() => kernel.socketInodes(process.pid),
+		);
 		assert.equal(raced.state, "present");
 	});
 });
@@ -329,11 +336,14 @@ describe("request attribution with real sender processes", () => {
 		assert.equal(judgeIsolation(isolationEvidence({ session: f.runtime.session, ledger: [{ index: 0, origin: reparented, auth: "dummy", refused: null }] })).kind, "pass");
 		await f.answer(second);
 		const third = await f.send("same");
-		const changed = await underKernelFaults((path, method) => {
-			if (method === "readlinkSync" && path === `/proc/${f.child.pid}/exe`) return "/not-pi";
-			if (method === "readFileSync" && path === `/proc/${f.child.pid}/environ`) return environText({ ...f.env, PI_OFFLINE: "0", OPENAI_API_KEY: "x" });
-			return undefined;
-		}, () => f.attribute(third));
+		const changed = await underKernelFaults(
+			(path, method) => {
+				if (method === "readlinkSync" && path === `/proc/${f.child.pid}/exe`) return "/not-pi";
+				if (method === "readFileSync" && path === `/proc/${f.child.pid}/environ`) return environText({ ...f.env, PI_OFFLINE: "0", OPENAI_API_KEY: "x" });
+				return undefined;
+			},
+			() => f.attribute(third),
+		);
 		assert.equal(changed.kind, "unknown", "a changed executable and environment must not reuse the earlier proof");
 		const environmentOnly = await underKernelFaults(
 			(path, method) => (method === "readFileSync" && path === `/proc/${f.child.pid}/environ` ? environText({ ...f.env, PI_SUBAGENT_NAME: "someone-else" }) : undefined),
@@ -382,7 +392,10 @@ describe("request attribution with real sender processes", () => {
 			() => f.attribute(second),
 		);
 		assert.equal(deniedChild.kind, "unknown", "denied reads are not proof that the sender left");
-		const deniedTable = await underKernelFaults((path) => (path === "/proc/net/tcp" ? denied(path) : undefined), () => f.attribute(second));
+		const deniedTable = await underKernelFaults(
+			(path) => (path === "/proc/net/tcp" ? denied(path) : undefined),
+			() => f.attribute(second),
+		);
 		assert.equal(deniedTable.kind, "unknown", "an unreadable socket table is not an empty one");
 	});
 
@@ -399,9 +412,15 @@ describe("request attribution with real sender processes", () => {
 		assert.equal(startTime(f.child.pid), f.child.startTime);
 		process.kill(f.child.pid, "SIGKILL");
 		assert.equal(await f.lines.next("sender exit"), "exited");
-		const deniedTable = await underKernelFaults((path) => (path === "/proc/net/tcp" ? denied(path) : undefined), () => f.attribute(kept));
+		const deniedTable = await underKernelFaults(
+			(path) => (path === "/proc/net/tcp" ? denied(path) : undefined),
+			() => f.attribute(kept),
+		);
 		assert.equal(deniedTable.kind, "unknown");
-		const deniedSender = await underKernelFaults((path) => (path === `/proc/${f.child.pid}/stat` ? denied(path) : undefined), () => f.attribute(kept));
+		const deniedSender = await underKernelFaults(
+			(path) => (path === `/proc/${f.child.pid}/stat` ? denied(path) : undefined),
+			() => f.attribute(kept),
+		);
 		assert.equal(deniedSender.kind, "unknown", "an unreadable sender is not a departed sender");
 		const historical = f.attribute(kept);
 		assert.equal(historical.kind, "host-child", historical.reason);
@@ -441,7 +460,10 @@ describe("runtime teardown keeps uncertainty and finishes every phase", () => {
 			removeRoot(runtime);
 		});
 		await runtime.startServer();
-		const teardown = await underKernelFaults((path) => (path === `/proc/${server.pid}/stat` ? denied(path) : undefined), () => runtime.close());
+		const teardown = await underKernelFaults(
+			(path) => (path === `/proc/${server.pid}/stat` ? denied(path) : undefined),
+			() => runtime.close(),
+		);
 		assert.equal(teardown.kind, "retained");
 		assert.ok(
 			teardown.uncertain.some((entry) => entry.pid === server.pid),
@@ -682,14 +704,21 @@ describe("lost observations reach the verdict", () => {
 			provider.ledger.faults.samples.some((sample) => sample.kind === "request-stream"),
 			JSON.stringify(provider.ledger.faults),
 		);
-		assert.equal(judgeIsolation(isolationEvidence({ ledger: [{ index: 0, origin: PASSING_PARENT, auth: "dummy", refused: null }], faults: { [provider.ledger.label]: provider.ledger.faults } })).kind, "fail");
+		assert.equal(
+			judgeIsolation(isolationEvidence({ ledger: [{ index: 0, origin: PASSING_PARENT, auth: "dummy", refused: null }], faults: { [provider.ledger.label]: provider.ledger.faults } })).kind,
+			"fail",
+		);
 	});
 
 	it("refuses an oversized body and fails isolation on it", async () => {
 		const provider = await startProvider({ model: "fixture", attribute: () => PASSING_PARENT, respond: () => ({ reply: textReply("ok") }), limits: { bodyBytes: 64, requests: 5, requestMs: 5000 } });
 		let status;
 		try {
-			const response = await fetch(`http://127.0.0.1:${provider.port}/v1/chat/completions`, { method: "POST", headers: { authorization: `Bearer ${DUMMY_KEY}` }, body: JSON.stringify({ messages: [], padding: "x".repeat(512) }) });
+			const response = await fetch(`http://127.0.0.1:${provider.port}/v1/chat/completions`, {
+				method: "POST",
+				headers: { authorization: `Bearer ${DUMMY_KEY}` },
+				body: JSON.stringify({ messages: [], padding: "x".repeat(512) }),
+			});
 			await response.text();
 			status = response.status;
 		} finally {
@@ -841,7 +870,9 @@ describe("collection and setup failures do not bypass cleanup", () => {
 
 	it("closes the delivery provider and keeps the run retained when Pi's close throws", async (t) => {
 		const fixture = deliveryBoundaries(t, { piClose: "injected Pi close failure" });
-		const run = await runSkillDelivery({ pi: NODE, packageRoot: PACKAGE_ROOT, root: makeTempRoot(t, "delivery-pi-close"), skills: [], boundaries: fixture.boundaries }).catch((error) => ({ thrown: error.message }));
+		const run = await runSkillDelivery({ pi: NODE, packageRoot: PACKAGE_ROOT, root: makeTempRoot(t, "delivery-pi-close"), skills: [], boundaries: fixture.boundaries }).catch((error) => ({
+			thrown: error.message,
+		}));
 		assert.deepEqual(fixture.calls, ["pi close", "provider close"], `cleanup stopped early: ${JSON.stringify(run)}`);
 		assert.equal(run.thrown, undefined);
 		assert.equal(run.providerClosed, true);
@@ -853,7 +884,9 @@ describe("collection and setup failures do not bypass cleanup", () => {
 
 	it("closes Pi and keeps the run retained when the provider's close throws", async (t) => {
 		const fixture = deliveryBoundaries(t, { providerClose: "injected provider close failure" });
-		const run = await runSkillDelivery({ pi: NODE, packageRoot: PACKAGE_ROOT, root: makeTempRoot(t, "delivery-provider-close"), skills: [], boundaries: fixture.boundaries }).catch((error) => ({ thrown: error.message }));
+		const run = await runSkillDelivery({ pi: NODE, packageRoot: PACKAGE_ROOT, root: makeTempRoot(t, "delivery-provider-close"), skills: [], boundaries: fixture.boundaries }).catch((error) => ({
+			thrown: error.message,
+		}));
 		assert.deepEqual(fixture.calls, ["pi close", "provider close"]);
 		assert.equal(run.thrown, undefined, "a provider close failure is reported, not thrown");
 		assert.equal(run.exit.closure, "closed");

@@ -1,17 +1,4 @@
-import {
-	copyFileSync,
-	existsSync,
-	mkdirSync,
-	mkdtempSync,
-	readdirSync,
-	readFileSync,
-	readlinkSync,
-	realpathSync,
-	rmSync,
-	statSync,
-	symlinkSync,
-	writeFileSync,
-} from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, readlinkSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, delimiter, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,15 +7,7 @@ import { runBounded } from "./phase3/processes.mjs";
 
 export const PACKAGE_ROOT = realpathSync(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
 
-const PORTABLE_FIELDS = new Set([
-	"name",
-	"description",
-	"license",
-	"compatibility",
-	"metadata",
-	"allowed-tools",
-	"disable-model-invocation",
-]);
+const PORTABLE_FIELDS = new Set(["name", "description", "license", "compatibility", "metadata", "allowed-tools", "disable-model-invocation"]);
 const NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const NEVER_PACKED_NAMES = new Set([".npmrc", ".git"]);
 const CORE_SCHEMA_SCALARS = [
@@ -67,7 +46,7 @@ export function parseFrontmatter(text) {
 		if (!PORTABLE_FIELDS.has(key)) problems.push(`frontmatter field is not portable: ${key}`);
 		if (key in fields) problems.push(`frontmatter field is duplicated: ${key}`);
 		const quoted = /^"([^"\\]*)"$/.exec(raw);
-		if (!quoted && (/^[\[\]{}&*!|>'"%@`#,?:-]/.test(raw) || raw.includes(": ") || raw.includes(" #"))) {
+		if (!quoted && (/^[[\]{}&*!|>'"%@`#,?:-]/.test(raw) || raw.includes(": ") || raw.includes(" #"))) {
 			problems.push(`frontmatter value for ${key} needs quoting to remain plain YAML`);
 		}
 		fields[key] = quoted ? quoted[1] : plainScalar(raw);
@@ -81,13 +60,8 @@ function stripCode(markdown) {
 
 export function localLinkTargets(markdown) {
 	const prose = stripCode(markdown);
-	const targets = [
-		...[...prose.matchAll(/\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)].map((match) => match[1]),
-		...[...prose.matchAll(/^\s*\[[^\]]+\]:\s*(\S+)/gm)].map((match) => match[1]),
-	];
-	return targets
-		.filter((target) => !/^[a-z][a-z0-9+.-]*:/i.test(target) && !target.startsWith("#"))
-		.map((target) => decodeURI(target.split("#")[0]));
+	const targets = [...[...prose.matchAll(/\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)].map((match) => match[1]), ...[...prose.matchAll(/^\s*\[[^\]]+\]:\s*(\S+)/gm)].map((match) => match[1])];
+	return targets.filter((target) => !/^[a-z][a-z0-9+.-]*:/i.test(target) && !target.startsWith("#")).map((target) => decodeURI(target.split("#")[0]));
 }
 
 export function listFiles(root) {

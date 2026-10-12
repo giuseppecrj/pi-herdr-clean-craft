@@ -1,0 +1,15 @@
+{
+	"files": {
+		"includes": ["scripts/**", "test/**", "!test/fixtures/**", "!**/*.md"]
+	},
+	"formatter": {
+		"enabled": true,
+		"lineWidth": 200
+	},
+	"linter": {
+		"enabled": false
+	},
+	"assist": {
+		"enabled": false
+	}
+}

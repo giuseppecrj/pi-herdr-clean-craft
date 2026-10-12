@@ -4,14 +4,16 @@ This page separates executed tests and local CLI checks from documentation inspe
 
 ## Candidate environment
 
-Observed on 2026-10-10.
+Observed on 2026-10-10. The TypeScript, Biome, and oxlint rows were observed on 2026-10-12.
 
 | Component | Version | Evidence |
 | --- | --- | --- |
 | Pi CLI | 1.1.0 | Exercised. The default suite starts this binary in RPC mode for discovery and request delivery. The integration gate also runs it as a parent and as host-launched children. |
 | Node | 26.8.2 | Runs both suites, including the retry fixture's TypeScript through built-in type stripping, synchronous module hooks, and programmatic `node:test` runs in one process. Not a minimum-version test. |
-| TypeScript compiler | None on `PATH` | Not used. The fixture TypeScript is executed but not compiled or type-checked by any test. |
-| npm | 11.19.1 | Produces the package file list and tarball used by the tests. Installed the development dependency from the lockfile with `npm ci --ignore-scripts`. |
+| TypeScript compiler | 5.9.3 | Development tool only. `npm run typecheck` checks the retry fixture's TypeScript against its strict `tsconfig.json` with no diagnostics. The suites still execute that TypeScript through Node's type stripping, not compiled output. |
+| Biome | 2.5.11 | Development tool only. `npm run format:check` reports the scripts and tests formatted. |
+| oxlint | 1.80.0 | Development tool only. `npm run lint` reports no correctness findings in the scripts and tests. |
+| npm | 11.19.1 | Produces the package file list and tarball used by the tests. Installed the development dependencies from the lockfile with `npm ci --ignore-scripts`. |
 | Git | 2.55.0 | Runs the release tests' fixture repositories and local remotes. |
 | Bash | 5.3.15 | Runs the workflow's `run` lines in the release walk test. |
 | auto-changelog | 2.7.0 | Development tool only, not a runtime or install dependency of the package. Generated `CHANGELOG.md` and ran as the `version` hook in a disposable fixture. Locked from the `^2.6.0` range. |
@@ -54,11 +56,11 @@ Usually failed, attribution of that later request:
 ## Not yet measured
 
 - Any upstream quality or mutation analyzer, including crapper, mutator, dryer, dependency-checker, and SCRAP. None is supported or executed.
-- Type checking of the fixture by a compiler.
 - Host cancellation, worktrees, parallel writers, persistent children, and failure-result delivery.
 - pstack's setup change and init flows, and which commands a child session lists.
 - Whether a live model follows the methodology, honors a delegated role, or avoids starting a competing coordinator.
 - Other Pi, Node, npm, Herdr, host, or pstack versions, and platforms other than Linux.
-- The release workflow on GitHub Actions. Its scripts and step order are tested locally, but no hosted run, OIDC trusted publishing, provenance, registry write, or GitHub tag or release has happened. Publication is disabled; see [Releasing](../RELEASING.md).
+- The release job on GitHub Actions. Its scripts, step order, and fail-fast mandatory checks are tested locally. As of 2026-10-12 it had not run on a hosted runner, so neither the hosted Pi download nor the hosted checks had been exercised, and no skills version, tag, or GitHub Release existed. This page does not record a later run; check the workflow and the registry. The metadata-only bootstrap job did run there and verified OIDC trusted publishing and provenance for metadata only; see [Releasing](../RELEASING.md).
+- Installing a published version with `pi install npm:pi-herdr-clean-craft@<version>`. The tests register only a local checkout or extracted tarball.
 
 [Verification](verification.md) describes how each exercised check runs.

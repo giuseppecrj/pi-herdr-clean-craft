@@ -1,20 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import {
-	compareVersions,
-	isEntryPoint,
-	isStable,
-	PACKAGE_NAME,
-	parseVersion,
-	readManifest,
-	refuse,
-	requireEvent,
-	requireMainRef,
-	requireSha,
-	runMain,
-	sameCore,
-	writeOutputs,
-} from "./lib.mjs";
+import { compareVersions, isEntryPoint, isStable, PACKAGE_NAME, parseVersion, readManifest, refuse, requireEvent, requireMainRef, requireSha, runMain, sameCore, writeOutputs } from "./lib.mjs";
 
 const INITIAL_PUSH = /^0{40}$/;
 

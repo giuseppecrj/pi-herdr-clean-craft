@@ -1,8 +1,7 @@
 {
 	"name": "pi-herdr-clean-craft",
-	"version": "0.0.0",
-	"private": true,
-	"description": "Unofficial Pi methodology pack inspired by Robert C. Martin's engineering practices. Pre-release: the craft-mode hub and five stage skills ship; specification and final QA stages are planned.",
+	"version": "0.1.0",
+	"description": "Unofficial Pi methodology pack inspired by Robert C. Martin's engineering practices. Six explicit-only skills: the craft-mode hub and its TDD, refactor, architecture, quality, and mutation stages.",
 	"keywords": ["pi-package", "pi", "herdr", "tdd", "refactoring", "clean-code"],
 	"license": "MIT",
 	"author": {
@@ -43,6 +42,11 @@
 		"skills/craft-mutation/references/interpretation.md"
 	],
 	"scripts": {
+		"check": "npm run typecheck && npm run lint && npm run format:check && npm test",
+		"format": "biome format --write scripts test",
+		"format:check": "biome format scripts test",
+		"lint": "oxlint scripts test",
+		"typecheck": "tsc -p test/fixtures/retry-eligibility/tsconfig.json",
 		"test": "node --test --test-concurrency=1 test/*.test.mjs",
 		"test:integration": "node --test --test-concurrency=1 test/integration/*.test.mjs",
 		"changelog": "auto-changelog",
@@ -52,7 +56,10 @@
 		"pi-herdr-agents": "3.2.1"
 	},
 	"devDependencies": {
-		"auto-changelog": "^2.6.0"
+		"@biomejs/biome": "2.5.11",
+		"auto-changelog": "^2.6.0",
+		"oxlint": "1.80.0",
+		"typescript": "5.9.3"
 	},
 	"pi": {
 		"skills": ["./skills"]

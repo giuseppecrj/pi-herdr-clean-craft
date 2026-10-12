@@ -66,7 +66,7 @@ export function createHerdrInstance({ herdr, session, env, cwd, root, record, ad
 	async function client(args, { mutates, limit, clientEnv = env, explicitSession = true }) {
 		if (mutates && state !== "verified") throw new StepFailure(limit.step, `Herdr instance is ${state}; mutation refused`);
 		const argv = explicitSession ? ["--session", session, ...args] : args;
-		const { closed, ...result } = await runBounded({ command: herdr, args: argv, cwd, env: clientEnv, limit });
+		const { closed: _closed, ...result } = await runBounded({ command: herdr, args: argv, cwd, env: clientEnv, limit });
 		commands.push(Object.freeze({ argv, mutates, explicitSession, ...result }));
 		if (mutates && (result.timedOut || result.closure !== "closed")) state = "tainted";
 		return { ...result, json: parseJson(result.stdout) };
