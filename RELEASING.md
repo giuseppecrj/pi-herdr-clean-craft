@@ -15,7 +15,7 @@ The list lives in `scripts/release/readiness.mjs`, and the release tests pin it.
 
 ## How the workflow decides
 
-The workflow is `.github/workflows/publish.yml`. It runs when a push to `main` changes `package.json`, and on manual dispatch. Runs share one concurrency group and never cancel each other.
+The workflow is `.github/workflows/publish.yml`. It runs when a push to `main` changes `package.json` or `.github/npm-bootstrap/package.json`, and on manual dispatch. Runs share one concurrency group and never cancel each other.
 
 A read-only detect job reads `package.json` and, for a push, the previous commit's `package.json`:
 
@@ -67,14 +67,18 @@ On 2026-10-12, the maintainer authorized a local publication to reserve the name
 
 npm briefly served its temporary `0.0.0-stage` placeholder while processing the upload. It then made `0.0.0-bootstrap.0` available under both `bootstrap` and `latest`, despite the upload requesting only `bootstrap`. The registry names `giuseppecrj` as maintainer. The downloaded tarball matches the inspected local artifact byte for byte, with SHA-256 `7bd04aa0a6fa7a6cd6104e3f431c24477d91c03288f2cfef49e23972fa470581`. Neither tag contains the skills pack. No second publication or manual tag change was needed.
 
-The bootstrap used the maintainer's local npm authentication and browser approval. No repository `NPM_TOKEN` secret was created, and no trusted publisher was configured. The source manifest remains private at `0.0.0`, and every release blocker remains. This reservation is not a completed skills release or a waiver of its gates.
+The bootstrap used the maintainer's local npm authentication and browser approval. No repository `NPM_TOKEN` secret was created. The operator later reported configuring the trusted publisher, but no hosted OIDC publication has verified it. The source manifest remains private at `0.0.0`, and every release blocker remains. This reservation is not a completed skills release or a waiver of its gates.
+
+## Metadata-only bootstrap job
+
+The workflow's `bootstrap` job checks trusted publishing with `pi-herdr-clean-craft@0.0.0-bootstrap.1`, the `bootstrap` dist-tag, and provenance. It runs only on the first attempt of a push to `main` in this public repository. It reads Git history and publishes only when the bootstrap manifest did not exist before the push. Later pushes upload nothing. Reruns and manual dispatch skip the job. It validates and stages the three metadata files, records `gitHead`, and publishes without tokens or upload retries. It never publishes the root package or waives a skills-release gate. The hosted check is pending when this change is authored.
 
 ## Before the first skills publication
 
 Publishing the skills pack needs the gates above and these remaining steps. External changes need separate approval:
 
-1. Make the GitHub repository public. It is private now, and npm does not generate provenance from a private repository.
-2. Configure npm trusted publishing for the existing package: GitHub Actions, owner `giuseppecrj`, repository `pi-herdr-clean-craft`, workflow file `publish.yml`.
+1. Keep the GitHub repository public. Its public visibility was verified on 2026-10-12. npm does not generate provenance from a private repository.
+2. Verify the operator-configured npm trusted publisher: GitHub Actions, owner `giuseppecrj`, repository `pi-herdr-clean-craft`, workflow file `publish.yml`.
 3. Keep the repository secret `NPM_TOKEN` absent. The package now exists, so the workflow requires trusted publishing and refuses a bootstrap token, including on exact retries.
 4. Provision the release job's test prerequisites in a reviewed change: the Pi CLI at the version the suites expect, Herdr, and exact pi-herdr-agents and pi-herdr-pstack package directories, from pinned and verified sources. Expose them through `CLEAN_CRAFT_PI_BIN`, `CLEAN_CRAFT_HERDR_BIN`, `CLEAN_CRAFT_HOST_ROOT`, and `CLEAN_CRAFT_PSTACK_ROOT`, as [verification](docs/verification.md) describes. No provisioning method has been chosen or tested on a hosted runner.
 5. Complete the required gates, then remove `"private": true` and set the first stable version through the version flow above in a reviewed change. When that change reaches `main`, the push is a candidate.

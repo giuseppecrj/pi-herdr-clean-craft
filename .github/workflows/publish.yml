@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - package.json
+      - .github/npm-bootstrap/package.json
   workflow_dispatch:
 
 permissions: {}
@@ -106,3 +107,84 @@ jobs:
           BOOTSTRAP_NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           GH_TOKEN: ${{ github.token }}
         run: node scripts/release/release.mjs
+
+  bootstrap:
+    name: Publish metadata-only bootstrap
+    if: >-
+      github.event_name == 'push'
+      && github.ref == 'refs/heads/main'
+      && github.repository == 'giuseppecrj/pi-herdr-clean-craft'
+      && github.event.repository.private == false
+      && github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 26.8.2
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Stage and publish bootstrap metadata
+        env:
+          NODE_AUTH_TOKEN: ''
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          git cat-file -e "$BEFORE_SHA^{commit}"
+          previous="$(git ls-tree --name-only "$BEFORE_SHA" -- \
+            .github/npm-bootstrap/package.json)"
+          if [ -n "$previous" ]; then
+            echo 'Bootstrap manifest already existed; no publication.'
+            exit 0
+          fi
+          stage="$(mktemp -d "$RUNNER_TEMP/bootstrap.XXXXXX")"
+          node --input-type=module - "$stage" <<'NODE'
+          import fs from 'node:fs';
+          const [stage] = process.argv.slice(2);
+          const src = '.github/npm-bootstrap';
+          const names = ['LICENSE', 'README.md', 'package.json'];
+          const fail = (m) => {
+            console.error(`bootstrap: ${m}`); process.exit(1);
+          };
+          if (fs.readdirSync(src).sort().join() !== names.join()) {
+            fail('expected exactly three files');
+          }
+          for (const n of names) {
+            const st = fs.lstatSync(`${src}/${n}`);
+            if (!st.isFile() || (st.mode & 0o111)) {
+              fail(`${n} must be a regular non-executable file`);
+            }
+          }
+          const m = JSON.parse(fs.readFileSync(`${src}/package.json`, 'utf8'));
+          const keys = ['bugs', 'description', 'files', 'homepage', 'license',
+            'name', 'publishConfig', 'repository', 'version'];
+          if (Object.keys(m).sort().join() !== keys.join()) {
+            fail('unexpected manifest keys');
+          }
+          if (m.name !== 'pi-herdr-clean-craft' ||
+              m.version !== '0.0.0-bootstrap.1') fail('unexpected identity');
+          const repo = 'git+https://github.com/' +
+            'giuseppecrj/pi-herdr-clean-craft.git';
+          if (m.repository?.url !== repo) fail('unexpected repository');
+          if (m.publishConfig?.access !== 'public' ||
+              m.publishConfig?.tag !== 'bootstrap') fail('publishConfig');
+          if (m.files?.join() !== 'README.md,LICENSE') fail('files list');
+          for (const n of ['LICENSE', 'README.md']) {
+            fs.copyFileSync(`${src}/${n}`, `${stage}/${n}`);
+          }
+          m.gitHead = process.env.GITHUB_SHA;
+          fs.writeFileSync(`${stage}/package.json`,
+            `${JSON.stringify(m, null, 2)}\n`);
+          NODE
+          cd "$stage"
+          npm publish --ignore-scripts --access public --tag bootstrap \
+            --provenance --fetch-retries=0 \
+            --registry https://registry.npmjs.org/
