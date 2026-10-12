@@ -6,7 +6,7 @@ The pack supplies instructions only. Child execution comes from [pi-herdr-agents
 
 ## Status
 
-Pre-release, version 0.0.0, not published. A release workflow is set up, but publication is disabled until the remaining release gates pass; [Releasing](RELEASING.md) lists them. It ships six skills:
+The skills pack is private at version 0.0.0 and has not been published. Its npm name is reserved through a separate metadata-only bootstrap, which contains no skills. The release workflow's publication is disabled until the remaining release gates pass; [Releasing](RELEASING.md) lists them. This checkout contains six skills:
 
 | Skill | Purpose |
 | --- | --- |
@@ -36,7 +36,7 @@ Loading a skill grants no permission to commit, install, publish, or change sett
 
 ## Installation
 
-There is no published release. The verified path is registering this checkout's absolute directory as a local package source in test-owned Pi settings. Registering it in your own settings, for example with `pi install /absolute/path/to/pi-herdr-clean-craft`, uses the same mechanism but writes to your Pi configuration, so do it only when you intend to.
+There is no published skills release. The npm bootstrap is not a usable Pi package. The verified path is registering this checkout's absolute directory as a local package source in test-owned Pi settings. Registering it in your own settings, for example with `pi install /absolute/path/to/pi-herdr-clean-craft`, uses the same mechanism but writes to your Pi configuration, so do it only when you intend to.
 
 `package.json` declares `pi-herdr-agents` 3.2.1 as a peer. That is the exercised candidate, not a validated pairing: the integration gate fails one host check, the `skills` option for standalone children, and usually fails isolation on a later request that follows from it. An npm peer declaration does not activate a Pi extension. Install the host through Pi if you want delegation. The hub's local route does not use it.
 

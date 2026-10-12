@@ -1,6 +1,6 @@
 # Releasing
 
-The release workflow is set up, but publication is disabled. No version of this package has been published, and none can be published by the current workflow. This page describes what the workflow does, why it stops, and what has to happen before it may publish.
+The release workflow is set up, but publication is disabled. No usable skills version has been published, and the current workflow cannot publish one. A separate local bootstrap reserved the npm name. This page describes the workflow's checks and the steps required before it may publish the skills pack.
 
 ## Current state
 
@@ -61,20 +61,27 @@ Then it publishes with `npm publish --access public --provenance --ignore-script
 
 The workflow creates release tags. Do not push a version tag by hand.
 
-## Before the first publication
+## Name-reservation bootstrap
 
-Publishing needs the gates above and these external steps. Each one needs separate approval, and none has been done:
+On 2026-10-12, the maintainer authorized a local publication to reserve the name. npm accepted `pi-herdr-clean-craft@0.0.0-bootstrap.0`, submitted with the `bootstrap` tag and without provenance. Its inspected tarball contains only `package.json`, `README.md`, and `LICENSE`. It contains no skills, executable code, dependencies, or installation scripts.
+
+npm briefly served its temporary `0.0.0-stage` placeholder while processing the upload. It then made `0.0.0-bootstrap.0` available under both `bootstrap` and `latest`, despite the upload requesting only `bootstrap`. The registry names `giuseppecrj` as maintainer. The downloaded tarball matches the inspected local artifact byte for byte, with SHA-256 `7bd04aa0a6fa7a6cd6104e3f431c24477d91c03288f2cfef49e23972fa470581`. Neither tag contains the skills pack. No second publication or manual tag change was needed.
+
+The bootstrap used the maintainer's local npm authentication and browser approval. No repository `NPM_TOKEN` secret was created, and no trusted publisher was configured. The source manifest remains private at `0.0.0`, and every release blocker remains. This reservation is not a completed skills release or a waiver of its gates.
+
+## Before the first skills publication
+
+Publishing the skills pack needs the gates above and these remaining steps. External changes need separate approval:
 
 1. Make the GitHub repository public. It is private now, and npm does not generate provenance from a private repository.
-2. Remove `"private": true` and set the first stable version, through the version flow above, in a reviewed change. When that change reaches `main`, the push is a candidate.
-3. Add a temporary repository secret `NPM_TOKEN` that can publish a new package, for the first publication only. An unauthenticated registry read on 2026-10-10 returned not found for this package name. That does not reserve the name.
-4. After the first publication, revoke the token and delete the secret. The workflow refuses to run while the secret exists for a package that already exists.
-5. Configure npm trusted publishing for the package: GitHub Actions, owner `giuseppecrj`, repository `pi-herdr-clean-craft`, workflow file `publish.yml`.
-6. Provision the release job's test prerequisites in a reviewed change: the Pi CLI at the version the suites expect, Herdr, and exact pi-herdr-agents and pi-herdr-pstack package directories, from pinned and verified sources. Expose them to the tests through `CLEAN_CRAFT_PI_BIN`, `CLEAN_CRAFT_HERDR_BIN`, `CLEAN_CRAFT_HOST_ROOT`, and `CLEAN_CRAFT_PSTACK_ROOT`, as [verification](docs/verification.md) describes. No provisioning method has been chosen or tested on a hosted runner.
+2. Configure npm trusted publishing for the existing package: GitHub Actions, owner `giuseppecrj`, repository `pi-herdr-clean-craft`, workflow file `publish.yml`.
+3. Keep the repository secret `NPM_TOKEN` absent. The package now exists, so the workflow requires trusted publishing and refuses a bootstrap token, including on exact retries.
+4. Provision the release job's test prerequisites in a reviewed change: the Pi CLI at the version the suites expect, Herdr, and exact pi-herdr-agents and pi-herdr-pstack package directories, from pinned and verified sources. Expose them through `CLEAN_CRAFT_PI_BIN`, `CLEAN_CRAFT_HERDR_BIN`, `CLEAN_CRAFT_HOST_ROOT`, and `CLEAN_CRAFT_PSTACK_ROOT`, as [verification](docs/verification.md) describes. No provisioning method has been chosen or tested on a hosted runner.
+5. Complete the required gates, then remove `"private": true` and set the first stable version through the version flow above in a reviewed change. When that change reaches `main`, the push is a candidate.
 
 ## What has and has not been tested
 
-The release tests run the workflow's own scripts locally, in test-owned Git repositories, with a loopback registry and command stand-ins for `npm` and `gh`. They also walk the workflow's steps in order and show that a version bump, an exact retry, and a first publication all stop at the readiness check. No test publishes, pushes to GitHub, or calls the real registry. The workflow has not run on GitHub Actions, and OIDC trusted publishing, provenance, and the hosted runner have not been exercised.
+The release tests run the workflow's own scripts locally, in test-owned Git repositories, with a loopback registry and command stand-ins for `npm` and `gh`. They also walk the workflow's steps in order and show that a version bump, an exact retry, and a first publication all stop at the readiness check. No test publishes, pushes to GitHub, or calls the real registry. The [first hosted workflow run](https://github.com/giuseppecrj/pi-herdr-clean-craft/actions/runs/38260824333) completed detection successfully and skipped the release job. Hosted release tests, OIDC trusted publishing, and provenance have not been exercised.
 
 ## Troubleshooting
 
