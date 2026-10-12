@@ -94,17 +94,17 @@ const RELEASE_STEPS = [
 ];
 
 describe("release workflow layout", () => {
-	it("runs on package.json pushes to main and manual dispatch only", () => {
-		assert.deepEqual(WORKFLOW.on, ["  push:", "    branches:", "      - main", "    paths:", "      - package.json", "  workflow_dispatch:"]);
+	it("runs on root or bootstrap manifest pushes to main and manual dispatch only", () => {
+		assert.deepEqual(WORKFLOW.on, ["  push:", "    branches:", "      - main", "    paths:", "      - package.json", "      - .github/npm-bootstrap/package.json", "  workflow_dispatch:"]);
 		assert.equal(WORKFLOW.top.name, "Release");
 		assert.equal(WORKFLOW.top.permissions, "{}");
 		assert.deepEqual(WORKFLOW.concurrency, { group: `${NAME}-release`, "cancel-in-progress": "false" });
 		assert.deepEqual(WORKFLOW.defaults, ["  run:", "    shell: bash"]);
 	});
 
-	it("keeps detection read-only and grants write and OIDC only to the release job", () => {
+	it("keeps detection read-only and grants repository write only to the release job", () => {
 		const { detect, release } = WORKFLOW.jobs;
-		assert.deepEqual(Object.keys(WORKFLOW.jobs), ["detect", "release"]);
+		assert.deepEqual(Object.keys(WORKFLOW.jobs), ["detect", "release", "bootstrap"]);
 		assert.deepEqual(detect.permissions, { contents: "read" });
 		assert.deepEqual(release.permissions, { contents: "write", "id-token": "write" });
 		for (const job of [detect, release]) assert.equal(job["runs-on"], "ubuntu-latest");
@@ -115,7 +115,7 @@ describe("release workflow layout", () => {
 	});
 
 	it("pins actions by commit, checks out full history without credentials, and pins Node 26.8.2", () => {
-		const steps = Object.values(WORKFLOW.jobs).flatMap((job) => job.steps);
+		const steps = [WORKFLOW.jobs.detect, WORKFLOW.jobs.release].flatMap((job) => job.steps);
 		const uses = steps.filter((step) => step.uses);
 		assert.deepEqual(
 			uses.map((step) => step.uses.split(" ")[0]),
@@ -139,7 +139,7 @@ describe("release workflow layout", () => {
 			detect.steps.map((step) => step.name),
 			["Check out repository", "Set up Node.js", "Detect release candidate"],
 		);
-		for (const step of [...detect.steps, ...release.steps]) {
+		for (const step of [...detect.steps, ...release.steps, ...WORKFLOW.jobs.bootstrap.steps]) {
 			assert.equal(step.if, undefined, step.name);
 			assert.equal(step["continue-on-error"], undefined, step.name);
 		}
@@ -376,5 +376,84 @@ describe("release metadata and documentation", () => {
 		assert.ok(links.length > 0);
 		for (const repository of links) assert.equal(repository, REPOSITORY);
 		assert.doesNotMatch(changelog, /pi-herdr-pstack/);
+	});
+});
+
+const BOOTSTRAP_RUN = (() => {
+	const lines = WORKFLOW_TEXT.split("\n");
+	const start = lines.indexOf("        run: |", lines.indexOf("  bootstrap:"));
+	return blockLines(lines, start + 1, 10).map((line) => line.slice(10)).join("\n") + "\n";
+})();
+
+describe("metadata-only bootstrap job", () => {
+	const job = WORKFLOW.jobs.bootstrap;
+
+	it("runs once, on the first attempt of the main push that first adds the bootstrap manifest", () => {
+		assert.equal(
+			job.if,
+			"github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'giuseppecrj/pi-herdr-clean-craft' && github.event.repository.private == false && github.run_attempt == 1",
+		);
+		assert.equal(job.needs, undefined);
+		assert.equal(job["runs-on"], "ubuntu-latest");
+		assert.equal(job["timeout-minutes"], "10");
+		assert.deepEqual(job.permissions, { contents: "read", "id-token": "write" });
+		assert.deepEqual(job.steps.map((step) => step.uses?.split(" ")[0] ?? step.name), [CHECKOUT, SETUP_NODE, "Stage and publish bootstrap metadata"]);
+		assert.deepEqual(job.steps[0].with, { "fetch-depth": "0", "persist-credentials": "false" });
+		assert.deepEqual(job.steps[1].with, { "node-version": "26.8.2", "registry-url": "https://registry.npmjs.org", "package-manager-cache": "false" });
+		assert.deepEqual(job.steps[2].env, { NODE_AUTH_TOKEN: "''", BEFORE_SHA: "${{ github.event.before }}" });
+		assert.doesNotMatch(job.if, /head_commit\.(added|modified|removed)/);
+		assert.doesNotMatch(BOOTSTRAP_RUN, /\$\{\{|TOKEN|secrets|npm pack|git tag|gh /);
+	});
+
+	it("ships exactly three metadata files with the target version and no runtime fields", () => {
+		const manifest = JSON.parse(read(".github/npm-bootstrap/package.json"));
+		assert.equal(`${manifest.name}@${manifest.version}`, `${NAME}@0.0.0-bootstrap.1`);
+		assert.deepEqual(manifest.publishConfig, { access: "public", tag: "bootstrap" });
+		for (const key of ["main", "exports", "bin", "scripts", "dependencies", "pi", "private"]) assert.equal(manifest[key], undefined, key);
+		assert.equal(read(".github/npm-bootstrap/LICENSE"), read("LICENSE"));
+	});
+
+	it("validates and stages only the bootstrap files, then publishes the staged copy", async (t) => {
+		const root = makeTempRoot(t, "bootstrap-job");
+		const work = join(root, "work");
+		const bin = join(root, "bin");
+		mkdirSync(join(root, "runner"));
+		mkdirSync(bin);
+		cpSync(join(PACKAGE_ROOT, ".github", "npm-bootstrap"), join(work, ".github", "npm-bootstrap"), { recursive: true });
+		writeFileSync(join(work, "package.json"), "{\"private\":true}\n");
+		writeFileSync(join(bin, "npm"), `#!/bin/sh\nprintf '%s\\n' "$PWD" "$@" > "${root}/npm.log"\n`);
+		chmodSync(join(bin, "npm"), 0o755);
+		const env = isolatedEnv(root, { RUNNER_TEMP: join(root, "runner"), NODE_AUTH_TOKEN: "", GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: "/dev/null" });
+		env.PATH = `${bin}${delimiter}${env.PATH}`;
+		const git = (...args) => execFileSync("git", ["-c", "user.name=Workflow Test", "-c", "user.email=workflow@example.invalid", "-c", "commit.gpgsign=false", ...args], { cwd: work, env, encoding: "utf8", timeout: 10_000 }).trim();
+		git("init", "--quiet");
+		git("add", "package.json");
+		git("commit", "--quiet", "-m", "before bootstrap");
+		env.BEFORE_SHA = git("rev-parse", "HEAD");
+		git("add", ".github");
+		git("commit", "--quiet", "-m", "add bootstrap");
+		env.GITHUB_SHA = git("rev-parse", "HEAD");
+		const ok = await run("bash", ["-e", "-c", BOOTSTRAP_RUN], { cwd: work, env, root, timeoutMs: 30_000 });
+		assert.equal(ok.code, 0, ok.stderr);
+		const [stage, ...args] = readFileSync(join(root, "npm.log"), "utf8").trim().split("\n");
+		assert.ok(stage.startsWith(join(root, "runner", "bootstrap.")), stage);
+		assert.deepEqual(args, ["publish", "--ignore-scripts", "--access", "public", "--tag", "bootstrap", "--provenance", "--fetch-retries=0", "--registry", "https://registry.npmjs.org/"]);
+		assert.deepEqual(execFileSync("ls", [stage], { encoding: "utf8" }).split("\n").filter(Boolean), ["LICENSE", "README.md", "package.json"]);
+		const staged = JSON.parse(readFileSync(join(stage, "package.json"), "utf8"));
+		assert.equal(staged.gitHead, env.GITHUB_SHA);
+		assert.equal(JSON.parse(read(".github/npm-bootstrap/package.json")).gitHead, undefined);
+		writeFileSync(join(root, "npm.log"), "no new publication");
+		const skipped = await run("bash", ["-e", "-c", BOOTSTRAP_RUN], { cwd: work, env: { ...env, BEFORE_SHA: env.GITHUB_SHA }, root, timeoutMs: 30_000 });
+		assert.equal(skipped.code, 0, skipped.stderr);
+		assert.match(skipped.stdout, /already existed/);
+		assert.equal(readFileSync(join(root, "npm.log"), "utf8"), "no new publication");
+		const missing = await run("bash", ["-e", "-c", BOOTSTRAP_RUN], { cwd: work, env: { ...env, BEFORE_SHA: "f".repeat(40) }, root, timeoutMs: 30_000 });
+		assert.notEqual(missing.code, 0);
+		assert.equal(readFileSync(join(root, "npm.log"), "utf8"), "no new publication");
+
+		writeFileSync(join(work, ".github", "npm-bootstrap", "package.json"), JSON.stringify({ ...staged, gitHead: undefined, scripts: { postinstall: "x" } }));
+		const refused = await run("bash", ["-e", "-c", BOOTSTRAP_RUN], { cwd: work, env, root, timeoutMs: 30_000 });
+		assert.notEqual(refused.code, 0);
+		assert.match(refused.stderr, /unexpected manifest keys/);
 	});
 });

@@ -1,0 +1,19 @@
+{
+	"name": "pi-herdr-clean-craft",
+	"version": "0.0.0-bootstrap.1",
+	"description": "Metadata-only bootstrap for pi-herdr-clean-craft, published from GitHub Actions to check npm trusted publishing and provenance. This is not a usable skills release.",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/giuseppecrj/pi-herdr-clean-craft.git"
+	},
+	"homepage": "https://github.com/giuseppecrj/pi-herdr-clean-craft#readme",
+	"bugs": {
+		"url": "https://github.com/giuseppecrj/pi-herdr-clean-craft/issues"
+	},
+	"files": ["README.md", "LICENSE"],
+	"publishConfig": {
+		"access": "public",
+		"tag": "bootstrap"
+	}
+}
