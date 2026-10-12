@@ -86,11 +86,11 @@ describe("manifest", () => {
 		assert.deepEqual(manifest.pi, { skills: ["./skills"] });
 	});
 
-	it("declares only the inspected host candidate as a peer and no other dependencies", () => {
+	it("declares only the inspected host candidate as a peer, the changelog tool for development, and no other dependencies", () => {
 		assert.deepEqual(manifest.peerDependencies, { "pi-herdr-agents": "3.2.1" });
+		assert.deepEqual(manifest.devDependencies, { "auto-changelog": "^2.6.0" });
 		for (const field of [
 			"dependencies",
-			"devDependencies",
 			"optionalDependencies",
 			"bundleDependencies",
 			"bundledDependencies",
@@ -99,17 +99,15 @@ describe("manifest", () => {
 		}
 	});
 
-	it("has no install or lifecycle hooks", () => {
-		const scripts = Object.keys(manifest.scripts ?? {});
-		assert.deepEqual(
-			scripts.filter((name) => LIFECYCLE_SCRIPTS.includes(name)),
-			[],
-		);
+	it("has no install or lifecycle hooks except the changelog version hook", () => {
+		const hooks = Object.fromEntries(Object.entries(manifest.scripts ?? {}).filter(([name]) => LIFECYCLE_SCRIPTS.includes(name)));
+		assert.deepEqual(hooks, { version: "auto-changelog --package && git add CHANGELOG.md" });
 		assert.equal(manifest.gypfile, undefined);
 	});
 
 	it("allowlists exactly the packaged files", () => {
 		assert.deepEqual(manifest.files.toSorted(), expectedPackFiles().filter((path) => path !== "package.json"));
+		assert.equal(expectedPackFiles().length, 23);
 	});
 });
 
@@ -120,7 +118,7 @@ describe("npm pack --dry-run", () => {
 		const files = entry.files.map((file) => file.path).toSorted();
 		assert.deepEqual(files, expectedPackFiles());
 		for (const path of files) {
-			assert.doesNotMatch(path, /^(PLAN\.md|AGENTS\.md|\.audit\/|test\/|\.pi\/|node_modules\/)/, path);
+			assert.doesNotMatch(path, /^(PLAN\.md|AGENTS\.md|\.audit\/|test\/|\.pi\/|node_modules\/|\.github\/|scripts\/|\.npmrc$|package-lock\.json$)/, path);
 			assert.doesNotMatch(path, /fixtures|evidence|settings\.json|\.jsonl$|\.tgz$/, path);
 		}
 	});

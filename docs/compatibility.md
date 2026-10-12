@@ -11,7 +11,10 @@ Observed on 2026-10-10.
 | Pi CLI | 1.1.0 | Exercised. The default suite starts this binary in RPC mode for discovery and request delivery. The integration gate also runs it as a parent and as host-launched children. |
 | Node | 26.8.2 | Runs both suites, including the retry fixture's TypeScript through built-in type stripping, synchronous module hooks, and programmatic `node:test` runs in one process. Not a minimum-version test. |
 | TypeScript compiler | None on `PATH` | Not used. The fixture TypeScript is executed but not compiled or type-checked by any test. |
-| npm | 11.19.1 | Produces the package file list and tarball used by the tests. |
+| npm | 11.19.1 | Produces the package file list and tarball used by the tests. Installed the development dependency from the lockfile with `npm ci --ignore-scripts`. |
+| Git | 2.55.0 | Runs the release tests' fixture repositories and local remotes. |
+| Bash | 5.3.15 | Runs the workflow's `run` lines in the release walk test. |
+| auto-changelog | 2.7.0 | Development tool only, not a runtime or install dependency of the package. Generated `CHANGELOG.md` and ran as the `version` hook in a disposable fixture. Locked from the `^2.6.0` range. |
 | pi-herdr-agents | 3.2.1 | Exercised by the integration gate from a local package directory. One distinction fails against it, and isolation usually fails on a request that follows from that failure; see below. |
 | pi-herdr-pstack | 0.3.0 | Exercised by the integration gate from a local package directory, with its extension active. The version is recorded, not pinned. |
 | Herdr | 0.9.2-preview.2026-09-29-8e78f929d8f0, protocol 22 | Exercised by the integration gate as a test-owned named server. A preview build. |
@@ -56,5 +59,6 @@ Usually failed, attribution of that later request:
 - pstack's setup change and init flows, and which commands a child session lists.
 - Whether a live model follows the methodology, honors a delegated role, or avoids starting a competing coordinator.
 - Other Pi, Node, npm, Herdr, host, or pstack versions, and platforms other than Linux.
+- The release workflow on GitHub Actions. Its scripts and step order are tested locally, but no hosted run, OIDC trusted publishing, provenance, registry write, or GitHub tag or release has happened. Publication is disabled; see [Releasing](../RELEASING.md).
 
 [Verification](verification.md) describes how each exercised check runs.

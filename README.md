@@ -6,7 +6,7 @@ The pack supplies instructions only. Child execution comes from [pi-herdr-agents
 
 ## Status
 
-Pre-release, version 0.0.0, not published. It ships six skills:
+Pre-release, version 0.0.0, not published. A release workflow is set up, but publication is disabled until the remaining release gates pass; [Releasing](RELEASING.md) lists them. It ships six skills:
 
 | Skill | Purpose |
 | --- | --- |
@@ -42,13 +42,15 @@ There is no published release. The verified path is registering this checkout's 
 
 ## Checks
 
-`npm test` runs the default suite. It needs the Pi CLI and Linux `/proc`, but not Herdr, the host, or pstack. `npm run test:integration` is a separate required gate. It runs the packed package against a real host and pstack that you name with `CLEAN_CRAFT_HOST_ROOT` and `CLEAN_CRAFT_PSTACK_ROOT`, in a test-owned Herdr server on Linux. A failed run keeps its evidence even when `CLEAN_CRAFT_EVIDENCE_DIR` is unset, and prints where. Either command reports a missing prerequisite as `BLOCKED` and exits nonzero, because a check that could not run has not passed. [Verification](docs/verification.md) explains both.
+`npm test` runs the default suite. It needs the Pi CLI, Git, Bash, and Linux `/proc`, but no installed dependencies, Herdr, the host, or pstack. `npm run test:integration` is a separate required gate. It runs the packed package against a real host and pstack that you name with `CLEAN_CRAFT_HOST_ROOT` and `CLEAN_CRAFT_PSTACK_ROOT`, in a test-owned Herdr server on Linux. A failed run keeps its evidence even when `CLEAN_CRAFT_EVIDENCE_DIR` is unset, and prints where. Either command reports a missing prerequisite as `BLOCKED` and exits nonzero, because a check that could not run has not passed. [Verification](docs/verification.md) explains both.
 
 ## Documentation
 
 - [Compatibility](docs/compatibility.md): what has and has not been exercised.
 - [Verification](docs/verification.md): how the tests isolate Pi and what they prove.
 - [Provenance](docs/provenance.md): pinned sources and what was, and was not, reused.
+- [Releasing](RELEASING.md): the release workflow, its gates, and the external steps still pending.
+- [Changelog](CHANGELOG.md)
 - [Third-party notices](THIRD_PARTY_NOTICES.md)
 
 ## License

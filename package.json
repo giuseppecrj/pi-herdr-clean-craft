@@ -9,10 +9,20 @@
 		"name": "Giuseppe Rodriguez",
 		"url": "https://github.com/giuseppecrj"
 	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/giuseppecrj/pi-herdr-clean-craft.git"
+	},
+	"homepage": "https://github.com/giuseppecrj/pi-herdr-clean-craft#readme",
+	"bugs": {
+		"url": "https://github.com/giuseppecrj/pi-herdr-clean-craft/issues"
+	},
 	"type": "module",
 	"files": [
+		"CHANGELOG.md",
 		"LICENSE",
 		"README.md",
+		"RELEASING.md",
 		"THIRD_PARTY_NOTICES.md",
 		"docs/compatibility.md",
 		"docs/provenance.md",
@@ -34,12 +44,25 @@
 	],
 	"scripts": {
 		"test": "node --test --test-concurrency=1 test/*.test.mjs",
-		"test:integration": "node --test --test-concurrency=1 test/integration/*.test.mjs"
+		"test:integration": "node --test --test-concurrency=1 test/integration/*.test.mjs",
+		"changelog": "auto-changelog",
+		"version": "auto-changelog --package && git add CHANGELOG.md"
 	},
 	"peerDependencies": {
 		"pi-herdr-agents": "3.2.1"
 	},
+	"devDependencies": {
+		"auto-changelog": "^2.6.0"
+	},
 	"pi": {
 		"skills": ["./skills"]
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"auto-changelog": {
+		"commitLimit": false,
+		"template": "keepachangelog",
+		"unreleased": true
 	}
 }

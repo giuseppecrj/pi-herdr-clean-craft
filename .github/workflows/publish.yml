@@ -1,0 +1,108 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - package.json
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: pi-herdr-clean-craft-release
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  detect:
+    name: Detect release candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      decision: ${{ steps.detect.outputs.decision }}
+      name: ${{ steps.detect.outputs.name }}
+      version: ${{ steps.detect.outputs.version }}
+      tag: ${{ steps.detect.outputs.tag }}
+      sha: ${{ steps.detect.outputs.sha }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 26.8.2
+          package-manager-cache: false
+      - name: Detect release candidate
+        id: detect
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: node scripts/release/detect.mjs
+
+  release:
+    name: Publish, tag, and create GitHub release
+    needs: detect
+    if: >-
+      needs.detect.outputs.decision == 'candidate'
+      && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 26.8.2
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Confirm release candidate
+        env:
+          CANDIDATE_NAME: ${{ needs.detect.outputs.name }}
+          CANDIDATE_VERSION: ${{ needs.detect.outputs.version }}
+          CANDIDATE_TAG: ${{ needs.detect.outputs.tag }}
+          CANDIDATE_SHA: ${{ needs.detect.outputs.sha }}
+          REPOSITORY_PRIVATE: ${{ github.event.repository.private }}
+          REPOSITORY_VISIBILITY: ${{ github.event.repository.visibility }}
+        run: node scripts/release/guard.mjs
+      - name: Check npm registry
+        id: registry
+        env:
+          PACKAGE_NAME: ${{ needs.detect.outputs.name }}
+          VERSION: ${{ needs.detect.outputs.version }}
+          REGISTRY_URL: https://registry.npmjs.org/
+        run: node scripts/release/registry.mjs
+      - name: Check release readiness
+        run: node scripts/release/readiness.mjs
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+      - name: Run default suite
+        run: npm test
+      - name: Run host integration gate
+        run: npm run test:integration
+      - name: Verify package contents
+        run: npm pack --dry-run --ignore-scripts
+      - name: Publish, tag, and create GitHub release
+        env:
+          PACKAGE_NAME: ${{ needs.detect.outputs.name }}
+          VERSION: ${{ needs.detect.outputs.version }}
+          TAG: ${{ needs.detect.outputs.tag }}
+          REGISTRY_STATE: ${{ steps.registry.outputs.registry }}
+          BOOTSTRAP_NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/release/release.mjs

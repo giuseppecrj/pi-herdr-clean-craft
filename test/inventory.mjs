@@ -61,8 +61,10 @@ export const SKILLS = [
 ];
 
 export const PACKAGED_DOCS = [
+	"CHANGELOG.md",
 	"LICENSE",
 	"README.md",
+	"RELEASING.md",
 	"THIRD_PARTY_NOTICES.md",
 	"docs/compatibility.md",
 	"docs/provenance.md",
