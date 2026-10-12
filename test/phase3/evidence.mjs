@@ -414,7 +414,7 @@ export function judgeDiscovery(evidence) {
 	const d = "discovery";
 	const commands = evidence.commands?.data?.commands;
 	if (!commands) return unreached(evidence, d, "the parent never listed its commands");
-	const { candidateRoot, hostRoot, pstackRoot, hostSkills, pstackSkills, craftSkills, pstackExtension } = evidence.canonical;
+	const { candidateRoot, candidateExtension, hostRoot, pstackRoot, hostSkills, pstackSkills, craftSkills, pstackExtension } = evidence.canonical;
 	const names = commands.map((command) => command.name);
 	const duplicates = names.filter((name, index) => names.indexOf(name) !== index);
 	if (duplicates.length > 0) return fail(d, `duplicate command names: ${duplicates.join(", ")}`);
@@ -427,7 +427,14 @@ export function judgeDiscovery(evidence) {
 			return fail(d, `skill:${skill.name} is not owned by the candidate: ${info.path}`);
 		}
 	}
-	if (commands.some((command) => command.sourceInfo?.source === candidateRoot && command.source !== "skill")) return fail(d, "the candidate registers a non-skill command");
+	const candidateCommands = commands.filter((command) => command.sourceInfo?.source === candidateRoot && command.source !== "skill");
+	const [mode] = candidateCommands;
+	if (candidateCommands.length !== 1 || mode.name !== "craft-mode" || mode.source !== "extension" || mode.sourceInfo.path !== candidateExtension) {
+		return fail(
+			d,
+			`the candidate's non-skill commands are not exactly its /craft-mode extension command: ${candidateCommands.map((command) => `${command.source}:${command.name}`).join(", ") || "none"}`,
+		);
+	}
 	for (const [label, root, expected] of [
 		["host", hostRoot, hostSkills],
 		["pstack", pstackRoot, pstackSkills],
@@ -445,7 +452,7 @@ export function judgeDiscovery(evidence) {
 	}
 	return pass(
 		d,
-		`six craft-* skills come only from the candidate; ${hostSkills.length} host and ${pstackSkills.length} pstack skills keep their owners; subagent belongs to the host and poteto-mode/setup-pstack to pstack; no duplicate names among ${names.length} commands`,
+		`six craft-* skills and the /craft-mode command come only from the candidate; ${hostSkills.length} host and ${pstackSkills.length} pstack skills keep their owners; subagent belongs to the host and poteto-mode/setup-pstack to pstack; no duplicate names among ${names.length} commands`,
 	);
 }
 

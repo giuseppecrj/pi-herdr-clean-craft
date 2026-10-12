@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
-import { expectedPackFiles, PACKAGED_DOCS, SKILLS } from "./inventory.mjs";
+import { EXTENSIONS, expectedPackFiles, PACKAGED_DOCS, SKILLS } from "./inventory.mjs";
 import { checkSkill, extractPack, listFiles, localLinkTargets, makeTempRoot, npmPack, PACKAGE_ROOT } from "./support.mjs";
 
 const manifest = JSON.parse(readFileSync(join(PACKAGE_ROOT, "package.json"), "utf8"));
@@ -72,13 +72,20 @@ describe("manifest", () => {
 		assert.ok(manifest.keywords.includes("pi-package"));
 	});
 
-	it("exposes only the skills directory and no extension", () => {
-		assert.deepEqual(manifest.pi, { skills: ["./skills"] });
+	it("exposes the skills directory and exactly the one owned extension", () => {
+		assert.deepEqual(manifest.pi, { extensions: EXTENSIONS.map((path) => `./${path}`), skills: ["./skills"] });
 	});
 
-	it("declares only the inspected host candidate as a peer, the changelog and check tools for development, and no other dependencies", () => {
-		assert.deepEqual(manifest.peerDependencies, { "pi-herdr-agents": "3.2.1" });
-		assert.deepEqual(manifest.devDependencies, { "@biomejs/biome": "2.5.11", "auto-changelog": "^2.6.0", oxlint: "1.80.0", typescript: "5.9.3" });
+	it("declares the Pi SDK and the inspected host candidate as peers, exact SDK and Node types plus the check tools for development, and no other dependencies", () => {
+		assert.deepEqual(manifest.peerDependencies, { "@earendil-works/pi-coding-agent": "*", "pi-herdr-agents": "3.2.1" });
+		assert.deepEqual(manifest.devDependencies, {
+			"@biomejs/biome": "2.5.11",
+			"@earendil-works/pi-coding-agent": "1.1.0",
+			"@types/node": "26.6.5",
+			"auto-changelog": "^2.6.0",
+			oxlint: "1.80.0",
+			typescript: "5.9.3",
+		});
 		for (const field of ["dependencies", "optionalDependencies", "bundleDependencies", "bundledDependencies"]) {
 			assert.equal(manifest[field], undefined, field);
 		}
@@ -95,7 +102,7 @@ describe("manifest", () => {
 			manifest.files.toSorted(),
 			expectedPackFiles().filter((path) => path !== "package.json"),
 		);
-		assert.equal(expectedPackFiles().length, 23);
+		assert.equal(expectedPackFiles().length, 24);
 	});
 });
 
@@ -106,7 +113,11 @@ describe("npm pack --dry-run", () => {
 		const files = entry.files.map((file) => file.path).toSorted();
 		assert.deepEqual(files, expectedPackFiles());
 		for (const path of files) {
-			assert.doesNotMatch(path, /^(PLAN\.md|AGENTS\.md|\.audit\/|test\/|\.pi\/|node_modules\/|\.github\/|scripts\/|\.npmrc$|package-lock\.json$|biome\.json$|\.oxlintrc\.json$)/, path);
+			assert.doesNotMatch(
+				path,
+				/^(PLAN\.md|AGENTS\.md|\.audit\/|test\/|\.pi\/|node_modules\/|\.github\/|scripts\/|\.npmrc$|package-lock\.json$|biome\.json$|\.oxlintrc\.json$|pi-extension\/tsconfig\.json$)/,
+				path,
+			);
 			assert.doesNotMatch(path, /fixtures|evidence|settings\.json|\.jsonl$|\.tgz$/, path);
 		}
 	});

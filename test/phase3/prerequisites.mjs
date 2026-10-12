@@ -1,5 +1,5 @@
 import { accessSync, constants, existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
-import { delimiter, isAbsolute, join, relative } from "node:path";
+import { basename, delimiter, dirname, isAbsolute, join, relative } from "node:path";
 import { procAvailable } from "./proc.mjs";
 import { sha256 } from "./wire.mjs";
 
@@ -23,7 +23,8 @@ export function resolveExecutable(env, { variable, name }) {
 		return { kind: "found", path: realpathSync(override), source: variable };
 	}
 	for (const dir of (env.PATH ?? "").split(delimiter)) {
-		if (!isAbsolute(dir)) continue;
+		// npm run puts package-local bins first; a development dependency's bundled CLI is not the installed tool under test.
+		if (!isAbsolute(dir) || (basename(dir) === ".bin" && basename(dirname(dir)) === "node_modules")) continue;
 		const candidate = join(dir, name);
 		if (executableFile(candidate)) return { kind: "found", path: realpathSync(candidate), source: "PATH" };
 	}

@@ -62,6 +62,18 @@ The Phase 3 delivery checks and integration gate are original, dependency-free t
 
 Three throwaway probes outside the package measured the Herdr isolation, Pi delivery, and single host-chain shapes before this code was written. Their scripts were not reused.
 
+## Sticky command design references
+
+The optional `/craft-mode` command is under development. Its design uses the following behavior and API references. New implementation, tests, and instructions must be original; no pstack code or prompt text is copied.
+
+| Source | Snapshot | Reference use |
+| --- | --- | --- |
+| pi-herdr-pstack | `135c0fc7514afc1af7560c17f53bf25cf05b18db`, installed `0.3.0` | `pi-extension/pstack/mode.ts`, `resources.ts`, and their callers and tests inform the command and lifecycle requirements. They are behavior references, not implementation templates. |
+| Pi documentation and SDK declarations | Installed Pi `1.1.0`; coding-agent SDK `1.1.0` in the host checkout | Extension events, command contexts, branch entries, effective session projections, resource identity, RPC commands, and compaction. Grounding also traced the SDK's prompt preparation and custom-message paths. These observations still need real-Pi verification for the new command. |
+| pi-herdr-agents | Source `9d4c956af1885af4e2e8ab20368d6445779cf96c`, package `3.2.1` | Launch environment, forked-session seeding, and completion delivery establish the child-ownership and automatic-wake cases. `PI_SUBAGENT_ID` is a host hint, not a Pi API or security boundary. |
+
+The extension in `pi-extension/clean-craft/`, its reminder text, and its tests are original. The skill envelope it reproduces is Pi 1.1.0's own `/skill:` expansion format, read from the SDK, so the hub it adds matches what a user load produces. The child-session seeding in the tests follows the host's fork-mode file shape as observed, without its code. A throwaway real-Pi probe measured the delivery hook, wake path, and command behavior first; its scripts were not reused, and the tests build on the existing Phase 3 harness instead.
+
 ## Release infrastructure references
 
 The release workflow, its helper scripts under `scripts/release/`, and the release tests are original code using Node builtins, Git, and Bash. They follow the release sequence of pi-herdr-pstack, read as a behavior contract. No workflow text, script, test, or guide prose was copied, and none of these files is packaged. The workflow and scripts stay out of the tarball.
