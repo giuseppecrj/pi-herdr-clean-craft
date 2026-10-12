@@ -50,7 +50,7 @@ export function createEventLog(label, capacity, describe = () => null) {
 	function close(reason) {
 		if (closure) return;
 		closure = reason;
-		for (const waiter of [...waiters]) settle(waiter, { error: new StepFailure(waiter.step, `${label} closed: ${reason}`) });
+		for (const waiter of Array.from(waiters)) settle(waiter, { error: new StepFailure(waiter.step, `${label} closed: ${reason}`) });
 	}
 
 	function append(fields) {
@@ -65,7 +65,7 @@ export function createEventLog(label, capacity, describe = () => null) {
 		}
 		const entry = Object.freeze({ index: entries.length, ...fields });
 		entries.push(entry);
-		for (const waiter of [...waiters]) {
+		for (const waiter of Array.from(waiters)) {
 			if (entry.index >= waiter.from && waiter.predicate(entry)) settle(waiter, { entry });
 		}
 		return entry;
@@ -77,10 +77,7 @@ export function createEventLog(label, capacity, describe = () => null) {
 		if (closure) return Promise.reject(new StepFailure(limit.step, `${label} closed: ${closure}`));
 		return new Promise((resolve, reject) => {
 			const waiter = { predicate, from, step: limit.step, resolve, reject };
-			waiter.timer = setTimeout(
-				() => settle(waiter, { error: new StepFailure(limit.step, `deadline expired waiting on ${label}`) }),
-				remaining(limit),
-			);
+			waiter.timer = setTimeout(() => settle(waiter, { error: new StepFailure(limit.step, `deadline expired waiting on ${label}`) }), remaining(limit));
 			waiters.add(waiter);
 		});
 	}

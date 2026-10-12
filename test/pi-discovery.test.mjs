@@ -5,27 +5,14 @@ import { describe, it } from "node:test";
 import { expectedPackFiles, SKILLS } from "./inventory.mjs";
 import { extractPack, findExecutable, isolatedEnv, listFiles, makeTempRoot, npmPack, PACKAGE_ROOT, run } from "./support.mjs";
 
-const PI_FLAGS = [
-	"--mode",
-	"rpc",
-	"--no-session",
-	"--offline",
-	"--no-extensions",
-	"--no-context-files",
-	"--no-tools",
-	"--no-prompt-templates",
-	"--no-themes",
-	"--no-approve",
-];
+const PI_FLAGS = ["--mode", "rpc", "--no-session", "--offline", "--no-extensions", "--no-context-files", "--no-tools", "--no-prompt-templates", "--no-themes", "--no-approve"];
 
 function requirePi() {
 	const pi = process.env.CLEAN_CRAFT_PI_BIN ?? findExecutable("pi");
 	try {
 		accessSync(pi ?? "", constants.X_OK);
 	} catch {
-		assert.fail(
-			"BLOCKED: no executable Pi CLI on PATH or in CLEAN_CRAFT_PI_BIN. Package discovery is a required gate and has not passed.",
-		);
+		assert.fail("BLOCKED: no executable Pi CLI on PATH or in CLEAN_CRAFT_PI_BIN. Package discovery is a required gate and has not passed.");
 	}
 	return pi;
 }
@@ -54,10 +41,7 @@ async function discoveredCommands(t, packageRoot) {
 	const version = await run(pi, ["--version"], { cwd, env, timeoutMs: 15_000, root });
 	assert.equal(version.code, 0, version.stderr);
 	t.diagnostic(`pi ${version.stdout.trim()} at ${pi}`);
-	writeFileSync(
-		join(agentDir, "settings.json"),
-		`${JSON.stringify({ packages: [packageRoot], enableInstallTelemetry: false }, null, "\t")}\n`,
-	);
+	writeFileSync(join(agentDir, "settings.json"), `${JSON.stringify({ packages: [packageRoot], enableInstallTelemetry: false }, null, "\t")}\n`);
 	const result = await run(pi, PI_FLAGS, {
 		cwd,
 		env,
@@ -78,10 +62,7 @@ async function discoveredCommands(t, packageRoot) {
 }
 
 function assertInventoryRegistered(commands, packageRoot) {
-	assert.deepEqual(
-		commands.map((command) => command.name).toSorted(),
-		SKILLS.map((skill) => `skill:${skill.name}`).toSorted(),
-	);
+	assert.deepEqual(commands.map((command) => command.name).toSorted(), SKILLS.map((skill) => `skill:${skill.name}`).toSorted());
 	for (const skill of SKILLS) {
 		const command = commands.find((entry) => entry.name === `skill:${skill.name}`);
 		assert.deepEqual(command, {

@@ -1,17 +1,22 @@
 # Releasing
 
-The release workflow is set up, but publication is disabled. No usable skills version has been published, and the current workflow cannot publish one. A separate local bootstrap reserved the npm name. This page describes the workflow's checks and the steps required before it may publish the skills pack.
+This page describes how the release workflow decides, checks, and publishes a version, and what to do before a release. A separate local bootstrap reserved the npm name, and a metadata-only bootstrap verified OIDC trusted publishing and provenance; both are recorded below as dated history.
 
-## Current state
+## Release scope
 
-`package.json` is `private` at version `0.0.0`, so a push that changes it is not even a release candidate. Even for a candidate, the release job stops at its readiness check, which fails while any of these gates remains open:
+The first stable version, 0.1.0, ships six explicit-only skills: the craft-mode hub and the craft-tdd, craft-refactor, craft-architecture, craft-quality, and craft-mutation stages. Specification and final QA stage skills are planned and do not ship. Two limitations are known: the host's `skills` argument does not deliver a skill to a standalone child, so the child must read the named skill files itself, and no live-model evaluation of the methodology has been run. The [README](README.md) describes both.
 
-- `phase3-integration-gate`: `npm run test:integration` fails against pi-herdr-agents 3.2.1. The host's `skills` argument does not deliver the skill with a standalone child's task, and isolation of the later request that follows from it usually fails. See [compatibility](docs/compatibility.md).
-- `phase6-live-model-evaluation`: no bounded live-model evaluation of the methodology has been run.
-- `phase6-release-review`: the final compatibility matrix, source-rights review, and audited tarball review for a release candidate are not done.
-- `hosted-test-provisioning`: nothing installs Pi, Herdr, pi-herdr-agents, or pi-herdr-pstack on the hosted runner, so the release job's `npm test` and `npm run test:integration` steps would report `BLOCKED` there.
+## Mandatory checks
 
-The list lives in `scripts/release/readiness.mjs`, and the release tests pin it. A version bump, a rerun, a secret, or a file in the repository cannot clear it. Remove an entry only in a reviewed change that records the passing evidence for that gate and updates the tests. Do not replace a gate with an approval file, a skipped check, or a recorded result that was not measured.
+A candidate must pass the same mandatory automated checks that pi-herdr-pstack's release job runs, in this order, and any failure stops the job before publication:
+
+1. `npm ci --ignore-scripts`
+2. `npm run format:check`, Biome's formatter over `scripts` and `test`, excluding the fixture data under `test/fixtures`.
+3. `npm run lint`, oxlint's correctness rules over the same files.
+4. `npm run check`, which runs `npm run typecheck` (TypeScript over the retry-eligibility fixture's strict `tsconfig.json`), `npm run lint`, `npm run format:check`, and `npm test`, stopping at the first failure. Before this step the job downloads the official Pi 1.1.0 Linux x64 build to the runner's temporary directory, checks the archive's SHA-256 before extracting it and the `pi/pi` binary's SHA-256 after, and passes that binary to the default suite through `CLEAN_CRAFT_PI_BIN`. It installs nothing else. Without a verified Pi, the suite's Pi tests still report `BLOCKED` and fail.
+5. `npm pack --dry-run --ignore-scripts`
+
+These are automated checks of the package and its deterministic suite. They are not host evidence. The host integration check, `npm run test:integration`, is a separate compatibility check and is not part of the release job, as pstack's own host checks are not part of its CI. Its result does not veto a release. It needs Herdr, pi-herdr-agents, and pi-herdr-pstack, and still fails against pi-herdr-agents 3.2.1: the host's `skills` argument does not deliver the skill with a standalone child's task, and isolation of the later request that follows from it usually fails. The workaround is to name the skill and reference paths in the child's task and have the child read them first. Run the check locally before a release and report its result as measured. A passing hosted job does not mean it passed. No supported host combination has passed it, and no live-model evaluation of the methodology has been run. See [compatibility](docs/compatibility.md) and [verification](docs/verification.md).
 
 ## How the workflow decides
 
@@ -37,13 +42,12 @@ The release job then runs these steps, and any failure stops the rest:
 
 1. Confirm the candidate again: `main`, the detected commit checked out, the manifest's name and version, public access, repository metadata that names `giuseppecrj/pi-herdr-clean-craft`, a public repository, and a GitHub-hosted runner. npm provenance needs all of these.
 2. Read the npm registry. The package is absent only when npm answers HTTP 404 with exactly `{"error":"Not found"}`, allowing only JSON whitespace between its tokens. The body is matched as text, so a repeated key, which a JSON parser would collapse to its last value, is refused. A redirect, a timeout, an authentication error, an unexpected body, or any other failure stops the run. If this version already exists, it must have been published from this commit, which makes the run an exact retry. A version published from another commit, or without a recorded commit, stops the run before any tag or release.
-3. Check release readiness. This step runs for every registry state, including an exact retry.
-4. Install with `npm ci --ignore-scripts`, run `npm test`, run `npm run test:integration`, and preview the package. None of these is optional.
-5. Publish, tag, and create the GitHub Release, in that order.
+3. Run the mandatory checks listed above, for every registry state, including an exact retry. None of them is optional.
+4. Publish, tag, and create the GitHub Release, in that order.
 
 ## Publishing, tagging, and the GitHub Release
 
-The last step checks the readiness list again before doing anything else. It decides the npm credential and reads the existing tag and release before its first change:
+The last step decides the npm credential and reads the existing tag and release before its first change:
 
 - If the package does not exist on npm, the repository secret `NPM_TOKEN` must be set. It is used once to create the package.
 - If the package exists, `NPM_TOKEN` must not be set, including on an exact retry. Publishing uses OIDC trusted publishing with no token, and needs npm 11.5.1 or later and Node 22.14.0 or later. The pinned Node 26.8.2 provides both.
@@ -61,36 +65,39 @@ Then it publishes with `npm publish --access public --provenance --ignore-script
 
 The workflow creates release tags. Do not push a version tag by hand.
 
-## Name-reservation bootstrap
+## Name-reservation bootstrap, 2026-10-12
+
+This section records observations made on 2026-10-12. Registry tags may have changed since.
 
 On 2026-10-12, the maintainer authorized a local publication to reserve the name. npm accepted `pi-herdr-clean-craft@0.0.0-bootstrap.0`, submitted with the `bootstrap` tag and without provenance. Its inspected tarball contains only `package.json`, `README.md`, and `LICENSE`. It contains no skills, executable code, dependencies, or installation scripts.
 
-npm briefly served its temporary `0.0.0-stage` placeholder while processing the upload. It then made `0.0.0-bootstrap.0` available under both `bootstrap` and `latest`, despite the upload requesting only `bootstrap`. The registry names `giuseppecrj` as maintainer. The downloaded tarball matches the inspected local artifact byte for byte, with SHA-256 `7bd04aa0a6fa7a6cd6104e3f431c24477d91c03288f2cfef49e23972fa470581`. Neither tag contains the skills pack. No second publication or manual tag change was needed.
+At that time, npm briefly served its temporary `0.0.0-stage` placeholder while processing the upload. It then made `0.0.0-bootstrap.0` available under both `bootstrap` and `latest`, despite the upload requesting only `bootstrap`. The registry names `giuseppecrj` as maintainer. The downloaded tarball matches the inspected local artifact byte for byte, with SHA-256 `7bd04aa0a6fa7a6cd6104e3f431c24477d91c03288f2cfef49e23972fa470581`. Neither tag contains the skills pack. No second publication or manual tag change was needed.
 
-The bootstrap used the maintainer's local npm authentication and browser approval. No repository `NPM_TOKEN` secret was created. The operator later reported configuring the trusted publisher, but no hosted OIDC publication has verified it. The source manifest remains private at `0.0.0`, and every release blocker remains. This reservation is not a completed skills release or a waiver of its gates.
+The bootstrap used the maintainer's local npm authentication and browser approval. No repository `NPM_TOKEN` secret was created. The source manifest was then private at `0.0.0`. This reservation is not a skills release.
 
 ## Metadata-only bootstrap job
 
-The workflow's `bootstrap` job checks trusted publishing with `pi-herdr-clean-craft@0.0.0-bootstrap.1`, the `bootstrap` dist-tag, and provenance. It runs only on the first attempt of a push to `main` in this public repository. It reads Git history and publishes only when the bootstrap manifest did not exist before the push. Later pushes upload nothing. Reruns and manual dispatch skip the job. It validates and stages the three metadata files, records `gitHead`, and publishes without tokens or upload retries. It never publishes the root package or waives a skills-release gate. The hosted check is pending when this change is authored.
+The workflow's `bootstrap` job checks trusted publishing with `pi-herdr-clean-craft@0.0.0-bootstrap.1`, the `bootstrap` dist-tag, and provenance. It runs only on the first attempt of a push to `main` in this public repository. It reads Git history and publishes only when the bootstrap manifest did not exist before the push. Later pushes upload nothing. Reruns and manual dispatch skip the job. It validates and stages the three metadata files, records `gitHead`, and publishes without tokens or upload retries. It never publishes the root package.
 
-## Before the first skills publication
+On 2026-10-12, the job had run once. [Workflow run 38285196535](https://github.com/giuseppecrj/pi-herdr-clean-craft/actions/runs/38285196535), the push of commit `597d8d67a1ca0d28d78f7855578700f2e01ef740` to `main`, published `0.0.0-bootstrap.1` through OIDC trusted publishing with provenance, while detection correctly skipped the skills release job. The public registry names GitHub Actions as the trusted publisher and records that commit as `gitHead`. The provenance names the commit, workflow, and run. `npm audit signatures` passed, and the downloaded tarball holds exactly the three metadata files, matching the merged source. On that date, `latest` still pointed to `0.0.0-bootstrap.0`. This verifies the trusted publisher and provenance path for metadata only. It is not a skills release.
 
-Publishing the skills pack needs the gates above and these remaining steps. External changes need separate approval:
+## Before a release
+
+External changes need separate approval:
 
 1. Keep the GitHub repository public. Its public visibility was verified on 2026-10-12. npm does not generate provenance from a private repository.
-2. Verify the operator-configured npm trusted publisher: GitHub Actions, owner `giuseppecrj`, repository `pi-herdr-clean-craft`, workflow file `publish.yml`.
-3. Keep the repository secret `NPM_TOKEN` absent. The package now exists, so the workflow requires trusted publishing and refuses a bootstrap token, including on exact retries.
-4. Provision the release job's test prerequisites in a reviewed change: the Pi CLI at the version the suites expect, Herdr, and exact pi-herdr-agents and pi-herdr-pstack package directories, from pinned and verified sources. Expose them through `CLEAN_CRAFT_PI_BIN`, `CLEAN_CRAFT_HERDR_BIN`, `CLEAN_CRAFT_HOST_ROOT`, and `CLEAN_CRAFT_PSTACK_ROOT`, as [verification](docs/verification.md) describes. No provisioning method has been chosen or tested on a hosted runner.
-5. Complete the required gates, then remove `"private": true` and set the first stable version through the version flow above in a reviewed change. When that change reaches `main`, the push is a candidate.
+2. Keep the repository secret `NPM_TOKEN` absent. The package exists, so the workflow requires trusted publishing and refuses a bootstrap token, including on exact retries.
+3. Run the mandatory checks locally, and run `npm run test:integration` with the host prerequisites [verification](docs/verification.md) describes. Record what each actually reported, including the known host failure if it remains.
+4. Set the new stable version through the version flow above in a reviewed change, with `private` absent. When that change reaches `main`, the push is a candidate. The first stable version, 0.1.0, follows the private `0.0.0` manifest, so its push is a version increase.
 
 ## What has and has not been tested
 
-The release tests run the workflow's own scripts locally, in test-owned Git repositories, with a loopback registry and command stand-ins for `npm` and `gh`. They also walk the workflow's steps in order and show that a version bump, an exact retry, and a first publication all stop at the readiness check. No test publishes, pushes to GitHub, or calls the real registry. The [first hosted workflow run](https://github.com/giuseppecrj/pi-herdr-clean-craft/actions/runs/38260824333) completed detection successfully and skipped the release job. Hosted release tests, OIDC trusted publishing, and provenance have not been exercised.
+The release tests run the workflow's own scripts locally, in test-owned Git repositories, with a loopback registry and command stand-ins for `npm` and `gh`. They also walk the release job's own steps in order, for a version bump and for an exact retry, and show that a failure in installation, formatting, lint, the check aggregate, or the package preview stops the job before any later step, publication, tag, or release. A walk whose checks all pass reaches the publication script. A Pi download that does not match the pinned digest stops at provisioning, before extraction. No test publishes, pushes to GitHub, downloads Pi, or calls the real registry. On GitHub, the metadata-only bootstrap verified OIDC trusted publishing and provenance, as described above. These local tests do not show that the mandatory checks pass on a hosted runner or that a skills publication succeeds. Check the workflow run and the registry for that.
 
 ## Troubleshooting
 
 - **No release happened.** Read the detect job's notice: a private manifest, a prerelease, an unchanged version, a first push, or an unreadable previous manifest is not released.
-- **The readiness check failed.** That is expected while the gates above remain open.
+- **A mandatory check failed.** Reproduce it locally with the same command. `npm run format` rewrites formatting. A Pi provisioning failure means the download did not match the pinned digests; do not change the digests without verifying a new official build.
 - **npm already has this version from another commit.** Versions cannot be republished. Increase the version.
 - **The tag points to another commit.** Do not move it. Increase the version.
 - **The tag moved or disappeared during the run.** npm may already have the version. Find out who changed the tag before doing anything else. Do not move it back by force.

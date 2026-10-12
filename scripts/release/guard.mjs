@@ -1,18 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import {
-	isEntryPoint,
-	PACKAGE_NAME,
-	readManifest,
-	REPOSITORY,
-	refuse,
-	requireEvent,
-	requireMainRef,
-	requireSha,
-	requireStableVersion,
-	runMain,
-	SERVER_URL,
-} from "./lib.mjs";
+import { isEntryPoint, PACKAGE_NAME, readManifest, REPOSITORY, refuse, requireEvent, requireMainRef, requireSha, requireStableVersion, runMain, SERVER_URL } from "./lib.mjs";
 
 export function guard(env, cwd = process.cwd()) {
 	requireEvent(env);

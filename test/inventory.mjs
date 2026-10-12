@@ -5,12 +5,7 @@ export const SKILLS = [
 		description:
 			"Scope and route an engineering task through explicit behavior, test-first evidence, and verification, then report what was proven. Explicit invocation only. Routes to five bundled stage skills and reports the unshipped specification and final QA stages as blocked instead of improvising them.",
 		explicitOnly: true,
-		references: [
-			"references/authorization.md",
-			"references/delegation.md",
-			"references/reporting.md",
-			"references/workflows.md",
-		],
+		references: ["references/authorization.md", "references/delegation.md", "references/reporting.md", "references/workflows.md"],
 		siblings: ["craft-architecture", "craft-mutation", "craft-quality", "craft-refactor", "craft-tdd"],
 	},
 	{
@@ -60,16 +55,7 @@ export const SKILLS = [
 	},
 ];
 
-export const PACKAGED_DOCS = [
-	"CHANGELOG.md",
-	"LICENSE",
-	"README.md",
-	"RELEASING.md",
-	"THIRD_PARTY_NOTICES.md",
-	"docs/compatibility.md",
-	"docs/provenance.md",
-	"docs/verification.md",
-];
+export const PACKAGED_DOCS = ["CHANGELOG.md", "LICENSE", "README.md", "RELEASING.md", "THIRD_PARTY_NOTICES.md", "docs/compatibility.md", "docs/provenance.md", "docs/verification.md"];
 
 export const PLANNED_SKILLS = ["craft-qa", "craft-spec"];
 

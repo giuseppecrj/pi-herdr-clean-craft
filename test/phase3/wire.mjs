@@ -40,9 +40,7 @@ export function parseRequestBody(raw) {
 			}),
 		);
 	}
-	const tools = (Array.isArray(body.tools) ? body.tools : [])
-		.map((tool) => tool?.function?.name)
-		.filter((name) => typeof name === "string");
+	const tools = (Array.isArray(body.tools) ? body.tools : []).map((tool) => tool?.function?.name).filter((name) => typeof name === "string");
 	return Object.freeze({
 		kind: "parsed",
 		model: typeof body.model === "string" ? body.model : null,
@@ -87,12 +85,7 @@ function sameTurn(a, b) {
 		a.text === b.text &&
 		a.toolCallId === b.toolCallId &&
 		a.toolCalls.length === b.toolCalls.length &&
-		a.toolCalls.every(
-			(call, index) =>
-				call.id === b.toolCalls[index].id &&
-				call.name === b.toolCalls[index].name &&
-				call.arguments === b.toolCalls[index].arguments,
-		)
+		a.toolCalls.every((call, index) => call.id === b.toolCalls[index].id && call.name === b.toolCalls[index].name && call.arguments === b.toolCalls[index].arguments)
 	);
 }
 

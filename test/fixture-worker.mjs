@@ -78,10 +78,6 @@ for await (const event of run({ files: testFiles.map((file) => join(workspace, f
 	if (event.type !== "test:pass" && event.type !== "test:fail") continue;
 	const file = workspacePath(pathToFileURL(event.data.file).href);
 	const name = event.data.name === event.data.file ? file : event.data.name;
-	results.push(
-		event.type === "test:pass"
-			? { file, name, outcome: "pass" }
-			: { file, name, outcome: "fail", ...failure(event.data) },
-	);
+	results.push(event.type === "test:pass" ? { file, name, outcome: "pass" } : { file, name, outcome: "fail", ...failure(event.data) });
 }
 process.send({ event: "result", results }, () => process.disconnect());

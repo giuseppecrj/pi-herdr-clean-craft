@@ -8,11 +8,7 @@ import { checkSkill, extractPack, listFiles, localLinkTargets, makeTempRoot, npm
 const manifest = JSON.parse(readFileSync(join(PACKAGE_ROOT, "package.json"), "utf8"));
 
 const AMBIENT_CANDIDATE = {
-	"package.json": `${JSON.stringify(
-		{ name: "ambient-candidate", version: "0.0.0", private: true, files: ["kept.md", "PLAN.md", "test/", ".audit/"] },
-		null,
-		"\t",
-	)}\n`,
+	"package.json": `${JSON.stringify({ name: "ambient-candidate", version: "0.0.0", private: true, files: ["kept.md", "PLAN.md", "test/", ".audit/"] }, null, "\t")}\n`,
 	"kept.md": "Allowlisted resource.\n",
 	"PLAN.md": "Plan that an erroneous allowlist publishes.\n",
 	"test/leak.test.mjs": "export {};\n",
@@ -20,14 +16,7 @@ const AMBIENT_CANDIDATE = {
 	".audit/phase.md": "Evidence that an erroneous allowlist publishes.\n",
 	"unlisted.md": "Not allowlisted.\n",
 };
-const AMBIENT_PACKED = [
-	"package.json",
-	"kept.md",
-	"PLAN.md",
-	"test/leak.test.mjs",
-	"test/node_modules/helper/index.js",
-	".audit/phase.md",
-].toSorted();
+const AMBIENT_PACKED = ["package.json", "kept.md", "PLAN.md", "test/leak.test.mjs", "test/node_modules/helper/index.js", ".audit/phase.md"].toSorted();
 
 function writeCandidate(candidate, files) {
 	for (const [path, content] of Object.entries(files)) {
@@ -74,10 +63,11 @@ const LIFECYCLE_SCRIPTS = [
 ];
 
 describe("manifest", () => {
-	it("identifies an unreleased private MIT Pi package", () => {
+	it("identifies the public 0.1.0 MIT Pi package", () => {
 		assert.equal(manifest.name, "pi-herdr-clean-craft");
-		assert.equal(manifest.version, "0.0.0");
-		assert.equal(manifest.private, true);
+		assert.equal(manifest.version, "0.1.0");
+		assert.equal(manifest.private, undefined);
+		assert.deepEqual(manifest.publishConfig, { access: "public" });
 		assert.equal(manifest.license, "MIT");
 		assert.ok(manifest.keywords.includes("pi-package"));
 	});
@@ -86,15 +76,10 @@ describe("manifest", () => {
 		assert.deepEqual(manifest.pi, { skills: ["./skills"] });
 	});
 
-	it("declares only the inspected host candidate as a peer, the changelog tool for development, and no other dependencies", () => {
+	it("declares only the inspected host candidate as a peer, the changelog and check tools for development, and no other dependencies", () => {
 		assert.deepEqual(manifest.peerDependencies, { "pi-herdr-agents": "3.2.1" });
-		assert.deepEqual(manifest.devDependencies, { "auto-changelog": "^2.6.0" });
-		for (const field of [
-			"dependencies",
-			"optionalDependencies",
-			"bundleDependencies",
-			"bundledDependencies",
-		]) {
+		assert.deepEqual(manifest.devDependencies, { "@biomejs/biome": "2.5.11", "auto-changelog": "^2.6.0", oxlint: "1.80.0", typescript: "5.9.3" });
+		for (const field of ["dependencies", "optionalDependencies", "bundleDependencies", "bundledDependencies"]) {
 			assert.equal(manifest[field], undefined, field);
 		}
 	});
@@ -106,7 +91,10 @@ describe("manifest", () => {
 	});
 
 	it("allowlists exactly the packaged files", () => {
-		assert.deepEqual(manifest.files.toSorted(), expectedPackFiles().filter((path) => path !== "package.json"));
+		assert.deepEqual(
+			manifest.files.toSorted(),
+			expectedPackFiles().filter((path) => path !== "package.json"),
+		);
 		assert.equal(expectedPackFiles().length, 23);
 	});
 });
@@ -118,7 +106,7 @@ describe("npm pack --dry-run", () => {
 		const files = entry.files.map((file) => file.path).toSorted();
 		assert.deepEqual(files, expectedPackFiles());
 		for (const path of files) {
-			assert.doesNotMatch(path, /^(PLAN\.md|AGENTS\.md|\.audit\/|test\/|\.pi\/|node_modules\/|\.github\/|scripts\/|\.npmrc$|package-lock\.json$)/, path);
+			assert.doesNotMatch(path, /^(PLAN\.md|AGENTS\.md|\.audit\/|test\/|\.pi\/|node_modules\/|\.github\/|scripts\/|\.npmrc$|package-lock\.json$|biome\.json$|\.oxlintrc\.json$)/, path);
 			assert.doesNotMatch(path, /fixtures|evidence|settings\.json|\.jsonl$|\.tgz$/, path);
 		}
 	});
@@ -140,11 +128,7 @@ describe("packed skill links", () => {
 		const packageRoot = await extractPack(await npmPack(t, { dryRun: false }));
 		for (const skill of SKILLS) {
 			const { problems, references, siblings } = checkSkill(join(packageRoot, dirname(skill.path)));
-			assert.deepEqual(
-				{ problems, references, siblings },
-				{ problems: [], references: skill.references.toSorted(), siblings: skill.siblings.toSorted() },
-				skill.name,
-			);
+			assert.deepEqual({ problems, references, siblings }, { problems: [], references: skill.references.toSorted(), siblings: skill.siblings.toSorted() }, skill.name);
 		}
 	});
 
@@ -159,9 +143,7 @@ describe("packed skill links", () => {
 		assert.deepEqual({ problems: source.problems, siblings: source.siblings }, { problems: [], siblings: ["peer"] });
 		const packageRoot = await extractPack(await npmPack(t, { dryRun: false, candidateRoot: candidate }));
 		assert.deepEqual(listFiles(packageRoot), ["package.json", "skills/hub/SKILL.md"]);
-		assert.deepEqual(checkSkill(join(packageRoot, "skills", "hub")).problems, [
-			"SKILL.md links to a missing sibling skill: ../peer/SKILL.md",
-		]);
+		assert.deepEqual(checkSkill(join(packageRoot, "skills", "hub")).problems, ["SKILL.md links to a missing sibling skill: ../peer/SKILL.md"]);
 	});
 });
 

@@ -1,15 +1,5 @@
 import { dirname, join } from "node:path";
-import {
-	conversation,
-	inheritedLength,
-	inputTexts,
-	newInput,
-	parseFileAttachment,
-	parseSkillInvocation,
-	skillBody,
-	systemText,
-	toolCallArguments,
-} from "./wire.mjs";
+import { conversation, inheritedLength, inputTexts, newInput, parseFileAttachment, parseSkillInvocation, skillBody, systemText, toolCallArguments } from "./wire.mjs";
 
 export const DISTINCTIONS = Object.freeze([
 	"discovery",
@@ -85,9 +75,7 @@ export function skillDeliveryProblem(entry, expected, task) {
 
 export function hostPreflight(entry) {
 	if (!entry?.parsed) return { kind: "blocked", reason: "no received parent request" };
-	return entry.parsed.tools.includes("subagent")
-		? { kind: "ready" }
-		: { kind: "blocked", reason: "the received request declares no subagent tool, so the host is not active" };
+	return entry.parsed.tools.includes("subagent") ? { kind: "ready" } : { kind: "blocked", reason: "the received request declares no subagent tool, so the host is not active" };
 }
 
 function messageText(message) {
@@ -120,10 +108,7 @@ function subagentResult(log, name) {
 	return (
 		log.find(
 			(entry) =>
-				entry.record?.type === "message_end" &&
-				entry.record.message?.role === "custom" &&
-				entry.record.message.customType === "subagent_result" &&
-				entry.record.message.details?.name === name,
+				entry.record?.type === "message_end" && entry.record.message?.role === "custom" && entry.record.message.customType === "subagent_result" && entry.record.message.details?.name === name,
 		) ?? null
 	);
 }
@@ -137,9 +122,7 @@ function tasked(entry, marker) {
 }
 
 function unreached(evidence, distinction, what) {
-	return evidence.interruption
-		? blocked(distinction, `not reached: ${what} (run interrupted at ${evidence.interruption.step}: ${evidence.interruption.reason})`)
-		: fail(distinction, what);
+	return evidence.interruption ? blocked(distinction, `not reached: ${what} (run interrupted at ${evidence.interruption.step}: ${evidence.interruption.reason})`) : fail(distinction, what);
 }
 
 function launched(evidence, distinction, key) {
@@ -173,7 +156,11 @@ export function judgeStandalone(evidence) {
 	if (taskAt === -1) return fail(d, "the complete task text is missing from the new task input", refs);
 	if (taskAt < roleAt) return fail(d, "the task precedes the role text", refs);
 	const inSystem = systemText(first.parsed.turns).includes(run.child.roleMarker);
-	return pass(d, `role and task constraints arrive together in the child's first task input${inSystem ? "; the role marker is also in the system prompt" : "; the system prompt does not carry the role"}`, refs);
+	return pass(
+		d,
+		`role and task constraints arrive together in the child's first task input${inSystem ? "; the role marker is also in the system prompt" : "; the system prompt does not carry the role"}`,
+		refs,
+	);
 }
 
 export function judgeFork(evidence) {
@@ -197,7 +184,11 @@ export function judgeFork(evidence) {
 	const earlierRole = own.slice(0, inherited).some((turn) => turn.toolCalls.some((call) => typeof toolCallArguments(call)?.systemPrompt === "string"));
 	if (!earlierRole) return fail(d, "inherited history holds no earlier launch role text, so the control cannot expose a whole-request search", refs);
 	const anywhere = first.rawBody.includes(run.child.roleMarker);
-	return pass(d, `the new task segment after ${inherited} inherited turns omits the supplied role; inherited history keeps earlier launch role text; own role marker ${anywhere ? "present" : "absent"} elsewhere in the request`, refs);
+	return pass(
+		d,
+		`the new task segment after ${inherited} inherited turns omits the supplied role; inherited history keeps earlier launch role text; own role marker ${anywhere ? "present" : "absent"} elsewhere in the request`,
+		refs,
+	);
 }
 
 export function judgeResources(evidence) {
@@ -252,7 +243,8 @@ export function judgeCompletion(evidence) {
 	for (const key of ["standalone", "fork", "resources", "handoff-a", "handoff-b"]) {
 		if (!emittedCall(evidence.ledger, `call_${key.replace("-", "_")}`)) return unreached(evidence, d, `${key} was never launched`);
 		const result = completionOf(evidence, key);
-		if (result.problem) return evidence.interruption && !subagentResult(evidence.parentLog, evidence.table.children[key].args.name) ? unreached(evidence, d, result.problem) : fail(d, result.problem, refs);
+		if (result.problem)
+			return evidence.interruption && !subagentResult(evidence.parentLog, evidence.table.children[key].args.name) ? unreached(evidence, d, result.problem) : fail(d, result.problem, refs);
 		refs.push(`ledger#${result.minted.index}`, `rpc#${result.custom.index}`, `ledger#${result.carrier.index}`);
 	}
 	return pass(d, "each child result was minted only on its own request, reached the parent through a host subagent_result, and arrived in a later parent request without controller injection", refs);
@@ -263,7 +255,8 @@ export function judgeHandoff(evidence) {
 	const a = completionOf(evidence, "handoff-a");
 	if (a.problem) return emittedCall(evidence.ledger, "call_handoff_a") ? fail(d, a.problem) : unreached(evidence, d, "handoff-a was never launched");
 	const refs = [`ledger#${a.minted.index}`, `rpc#${a.custom.index}`, `ledger#${a.carrier.index}`];
-	if (parentEntries(evidence.ledger).some((entry) => entry.index < a.carrier.index && entry.rawBody.includes(a.nonce))) return fail(d, "A's result reached the parent before the host delivered it", refs);
+	if (parentEntries(evidence.ledger).some((entry) => entry.index < a.carrier.index && entry.rawBody.includes(a.nonce)))
+		return fail(d, "A's result reached the parent before the host delivered it", refs);
 	const accept = a.carrier.reply;
 	const next = accept?.calls.find((call) => call.name === "subagent");
 	if (!accept || accept.text !== `ACCEPTED ${a.nonce}` || !next) return fail(d, "the parent's response to A's result did not accept it and launch B", refs);
@@ -291,9 +284,7 @@ export function judgeSkillsArgument(evidence) {
 	const task = run.requests.find((entry) => tasked(entry, run.child.taskMarker));
 	const custom = subagentResult(evidence.parentLog, run.args.name);
 	if (!task) {
-		return custom
-			? fail(d, `upstream: the host delivered completion (rpc#${custom.index}), and no child request carried the task`)
-			: unreached(evidence, d, "no child request carried the task");
+		return custom ? fail(d, `upstream: the host delivered completion (rpc#${custom.index}), and no child request carried the task`) : unreached(evidence, d, "no child request carried the task");
 	}
 	const refs = [`ledger#${run.launch.index}`, `ledger#${task.index}`];
 	const retained = task.parsed.turns.some((turn) => {
@@ -302,8 +293,7 @@ export function judgeSkillsArgument(evidence) {
 	});
 	const carriesSkill = (entry) => entry.index > task.index && entry.parsed && newInput(entry.parsed.turns).some((turn) => parseSkillInvocation(turn.text)?.name === "craft-mode");
 	const later =
-		run.requests.find(carriesSkill) ??
-		evidence.ledger.find((entry) => entry.origin.kind === "unknown" && entry.origin.provenConnection?.subagentName === run.args.name && carriesSkill(entry));
+		run.requests.find(carriesSkill) ?? evidence.ledger.find((entry) => entry.origin.kind === "unknown" && entry.origin.provenConnection?.subagentName === run.args.name && carriesSkill(entry));
 	const derived = custom && task.minted && messageText(custom.record.message).includes(task.minted);
 	if (custom) refs.push(`rpc#${custom.index}`);
 	if (later) refs.push(`ledger#${later.index}`);
@@ -338,70 +328,65 @@ function controlOutcomes(evidence) {
 	const filtered = solos.filtered;
 	const filteredRequests = soloRequests(evidence, "filtered");
 	const filteredRead = filteredRequests[1] && newInput(filteredRequests[1].parsed.turns).find((turn) => turn.role === "tool");
-	results.filtered =
-		!filtered
-			? "not run"
-			: soloCommand(filtered, "skill:craft-tdd")
-				? "craft-tdd is still registered"
-				: !filteredRequests[0] || inputTexts(newInput(filteredRequests[0].parsed.turns))[0] !== filtered.message
-					? "the filtered command did not reach the provider as raw text"
-					: skillDeliveryProblem(filteredRequests[0], craftTdd, filtered.message) !== "new input is not an expanded skill block"
-						? "raw text was accepted as canonical delivery"
-						: filteredRead?.text !== canonical.files[craftTdd.location]
-							? "the filtered file was not readable through the read tool"
-							: null;
+	results.filtered = !filtered
+		? "not run"
+		: soloCommand(filtered, "skill:craft-tdd")
+			? "craft-tdd is still registered"
+			: !filteredRequests[0] || inputTexts(newInput(filteredRequests[0].parsed.turns))[0] !== filtered.message
+				? "the filtered command did not reach the provider as raw text"
+				: skillDeliveryProblem(filteredRequests[0], craftTdd, filtered.message) !== "new input is not an expanded skill block"
+					? "raw text was accepted as canonical delivery"
+					: filteredRead?.text !== canonical.files[craftTdd.location]
+						? "the filtered file was not readable through the read tool"
+						: null;
 
 	const shadowed = solos.shadowed;
 	const shadowCommand = shadowed && soloCommand(shadowed, "skill:craft-mode");
 	const shadowEntry = firstOf("shadowed");
 	const shadowDelivered = shadowEntry && deliveredSkill(shadowEntry);
-	results.shadowed =
-		!shadowed
-			? "not run"
-			: shadowCommand?.sourceInfo?.path !== shadowed.shadowPath
-				? `the effective craft-mode is ${shadowCommand?.sourceInfo?.path}, not the shadow`
-				: shadowDelivered?.invocation?.location !== shadowed.shadowPath || !shadowDelivered.invocation.body.includes(shadowed.shadowBody)
-					? "the received block is not the shadow's identity and body"
-					: !/^skill location /.test(skillDeliveryProblem(shadowEntry, craftMode, shadowDelivered.invocation.args) ?? "")
-						? "the shadow delivery was not rejected by identity"
-						: null;
+	results.shadowed = !shadowed
+		? "not run"
+		: shadowCommand?.sourceInfo?.path !== shadowed.shadowPath
+			? `the effective craft-mode is ${shadowCommand?.sourceInfo?.path}, not the shadow`
+			: shadowDelivered?.invocation?.location !== shadowed.shadowPath || !shadowDelivered.invocation.body.includes(shadowed.shadowBody)
+				? "the received block is not the shadow's identity and body"
+				: !(skillDeliveryProblem(shadowEntry, craftMode, shadowDelivered.invocation.args) ?? "").startsWith("skill location ")
+					? "the shadow delivery was not rejected by identity"
+					: null;
 
 	const decoy = solos.decoy;
 	const decoyCommand = decoy && soloCommand(decoy, "skill:craft-tdd");
 	const decoyEntry = firstOf("decoy");
 	const decoyDelivered = decoyEntry && deliveredSkill(decoyEntry);
-	results.decoy =
-		!decoy
-			? "not run"
-			: decoyCommand?.sourceInfo?.source !== decoy.decoyRoot
-				? "the decoy package did not register craft-tdd"
-				: !/^skill location /.test(skillDeliveryProblem(decoyEntry, craftTdd, decoyDelivered?.invocation?.args ?? "") ?? "")
-					? "the same-named decoy skill was not rejected by package identity"
-					: null;
+	results.decoy = !decoy
+		? "not run"
+		: decoyCommand?.sourceInfo?.source !== decoy.decoyRoot
+			? "the decoy package did not register craft-tdd"
+			: !(skillDeliveryProblem(decoyEntry, craftTdd, decoyDelivered?.invocation?.args ?? "") ?? "").startsWith("skill location ")
+				? "the same-named decoy skill was not rejected by package identity"
+				: null;
 
 	const unknown = solos.unknown;
 	const unknownEntry = firstOf("unknown");
-	results.unknown =
-		!unknown
-			? "not run"
-			: !unknownEntry || inputTexts(newInput(unknownEntry.parsed.turns))[0] !== unknown.message
-				? "the unknown command did not reach the provider as raw text"
-				: deliveredSkill(unknownEntry).problem !== "new input is not an expanded skill block"
-					? "raw unknown text was treated as a skill block"
-					: null;
+	results.unknown = !unknown
+		? "not run"
+		: !unknownEntry || inputTexts(newInput(unknownEntry.parsed.turns))[0] !== unknown.message
+			? "the unknown command did not reach the provider as raw text"
+			: deliveredSkill(unknownEntry).problem !== "new input is not an expanded skill block"
+				? "raw unknown text was treated as a skill block"
+				: null;
 
 	const disabled = solos["host-disabled"];
 	const disabledEntry = firstOf("host-disabled");
-	results["host-disabled"] =
-		!disabled
-			? "not run"
-			: soloCommand(disabled, "subagent")
-				? "the subagent command is registered despite the disabled extension"
-				: hostPreflight(disabledEntry).kind !== "blocked"
-					? "the host preflight did not report blocked"
-					: disabledEntry.reply?.calls.length
-						? "a launch was attempted without the host"
-						: null;
+	results["host-disabled"] = !disabled
+		? "not run"
+		: soloCommand(disabled, "subagent")
+			? "the subagent command is registered despite the disabled extension"
+			: hostPreflight(disabledEntry).kind !== "blocked"
+				? "the host preflight did not report blocked"
+				: disabledEntry.reply?.calls.length
+					? "a launch was attempted without the host"
+					: null;
 	return results;
 }
 
@@ -443,7 +428,10 @@ export function judgeDiscovery(evidence) {
 		}
 	}
 	if (commands.some((command) => command.sourceInfo?.source === candidateRoot && command.source !== "skill")) return fail(d, "the candidate registers a non-skill command");
-	for (const [label, root, expected] of [["host", hostRoot, hostSkills], ["pstack", pstackRoot, pstackSkills]]) {
+	for (const [label, root, expected] of [
+		["host", hostRoot, hostSkills],
+		["pstack", pstackRoot, pstackSkills],
+	]) {
 		for (const name of skillNames(expected)) {
 			const command = commands.find((entry) => entry.name === name);
 			if (!command || command.sourceInfo.source !== root) return fail(d, `${label} skill ${name} is missing or owned elsewhere`);
@@ -498,7 +486,9 @@ export function judgeWriter(evidence) {
 	refs.push(`rpc#${end.index}`);
 	const text = messageText(end.record.result);
 	if (!end.record.isError || !text.startsWith(WRITER_REFUSAL)) return fail(d, `the writer call was not refused by pstack policy: ${text.slice(0, 200)}`, refs);
-	const receipt = parentEntries(evidence.ledger).find((entry) => entry.index > emitted.entry.index && newInput(entry.parsed.turns).some((turn) => turn.toolCallId === "call_writer" && turn.text === text));
+	const receipt = parentEntries(evidence.ledger).find(
+		(entry) => entry.index > emitted.entry.index && newInput(entry.parsed.turns).some((turn) => turn.toolCallId === "call_writer" && turn.text === text),
+	);
 	if (!receipt) return fail(d, "the refusal did not reach the parent's next request", refs);
 	const { window } = windowEntries(evidence, "scenario writer");
 	const dialogs = evidence.parentLog.filter((entry) => entry.index >= window.from && entry.index <= window.settled && DIALOG_METHODS.has(entry.record?.method));
@@ -536,7 +526,8 @@ export function judgePstackMode(evidence) {
 	if (!section) return fail(d, "the pstack mode section is missing from the system prompt", refs);
 	const fresh = newInput(request.parsed.turns);
 	const craft = fresh.map((turn) => parseSkillInvocation(turn.text)).find((invocation) => invocation?.name === "craft-tdd");
-	if (!craft || invocationProblem(craft, evidence.canonical.skills["craft-tdd"]) || craft.args !== evidence.markers.modeSkill) return fail(d, "craft-tdd instructions were not intact beside the mode", refs);
+	if (!craft || invocationProblem(craft, evidence.canonical.skills["craft-tdd"]) || craft.args !== evidence.markers.modeSkill)
+		return fail(d, "craft-tdd instructions were not intact beside the mode", refs);
 	const hub = request.parsed.turns.map((turn) => parseSkillInvocation(turn.text)).find((invocation) => invocation?.name === "poteto-mode");
 	if (!hub || hub.body !== evidence.canonical.pstackHub.body || hub.location !== evidence.canonical.pstackHub.location) return fail(d, "the canonical poteto-mode hub was not supplied", refs);
 	const { start: handoffStart, end: handoffEnd } = windowEntries(evidence, "scenario handoff");
@@ -552,7 +543,11 @@ export function judgePstackMode(evidence) {
 	if (!final) return fail(d, "no parent request after the mode was turned off", refs);
 	refs.push(`ledger#${final.index}`);
 	if (MODE_SECTION.test(systemText(final.parsed.turns)) || inputTexts(newInput(final.parsed.turns)).includes(section)) return fail(d, "mode guidance continued after /poteto-mode off", refs);
-	return pass(d, "on, status and off were handled as commands; while on, the prompt carried the mode section, the canonical hub, and intact craft-tdd instructions, and each wake request carried the reminder; after off no guidance was added", refs);
+	return pass(
+		d,
+		"on, status and off were handled as commands; while on, the prompt carried the mode section, the canonical hub, and intact craft-tdd instructions, and each wake request carried the reminder; after off no guidance was added",
+		refs,
+	);
 }
 
 const REQUIRED_CHECKS = Object.freeze({
@@ -642,7 +637,10 @@ export function judgeTeardown(evidence) {
 		...(t.server?.started && (t.server.exit.closure !== "closed" || t.server.exit.code !== 0 || !t.server.stopCommand?.stopped) ? ["the owned server did not stop cleanly"] : []),
 	];
 	if (t.kind !== "closed" || problems.length > 0) return fail(d, `teardown ${t.kind} for ${t.root}: ${problems.join("; ") || t.kind}`);
-	return pass(d, `${t.identities.length} recorded process identities are confirmed gone, none is uncertain, no owned sockets remain, every direct process closed with exit 0 without escalation, and the provider closed`);
+	return pass(
+		d,
+		`${t.identities.length} recorded process identities are confirmed gone, none is uncertain, no owned sockets remain, every direct process closed with exit 0 without escalation, and the provider closed`,
+	);
 }
 
 const JUDGES = Object.freeze({

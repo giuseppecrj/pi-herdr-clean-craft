@@ -3,7 +3,6 @@ import { execFileSync } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { delimiter, join } from "node:path";
 import { describe, it } from "node:test";
-import { RELEASE_BLOCKERS } from "../scripts/release/readiness.mjs";
 import { runRelease } from "../scripts/release/release.mjs";
 import { isolatedEnv, makeTempRoot, PACKAGE_ROOT, run } from "./support.mjs";
 
@@ -159,7 +158,7 @@ function inProcess(fixture, extra) {
 	const lines = [];
 	let error = null;
 	try {
-		runRelease({ cwd: fixture.repo, env: fixture.releaseEnv(extra), blockers: [], stdio: "pipe", say: (line) => lines.push(line) });
+		runRelease({ cwd: fixture.repo, env: fixture.releaseEnv(extra), stdio: "pipe", say: (line) => lines.push(line) });
 	} catch (caught) {
 		error = caught;
 	}
@@ -180,44 +179,15 @@ function assertNoMutation(fixture) {
 	assert.equal(fixture.localTag(), null, "no local tag");
 }
 
-describe("release readiness", () => {
-	it("blocks publication today with the specific Phase 3, Phase 6, and hosted-provisioning gates", () => {
-		assert.deepEqual(
-			RELEASE_BLOCKERS.map((blocker) => blocker.id),
-			["phase3-integration-gate", "phase6-live-model-evaluation", "phase6-release-review", "hosted-test-provisioning"],
-		);
-		for (const blocker of RELEASE_BLOCKERS) {
-			assert.ok(Object.isFrozen(blocker));
-			assert.ok(blocker.gate.length > 0 && blocker.detail.length > 0, blocker.id);
-		}
-		assert.ok(Object.isFrozen(RELEASE_BLOCKERS));
+describe("release mutation script: entry point", () => {
+	it("runs the full plan from the command line, with no readiness list of its own", async (t) => {
+		const fixture = releaseFixture(t);
+		const result = await run(process.execPath, [join(SCRIPTS, "release.mjs")], { cwd: fixture.repo, env: fixture.releaseEnv(), timeoutMs: 30_000, root: fixture.root });
+		assert.equal(result.code, 0, result.stdout + result.stderr);
+		assert.deepEqual(calls(fixture.commands()), ["npm --version", "gh auth setup-git", "gh release view", "npm publish", "gh release create"]);
+		assert.equal(fixture.remoteTag(), fixture.sha);
+		assert.equal(existsSync(join(SCRIPTS, "readiness.mjs")), false);
 	});
-
-	it("exits nonzero and names every blocker", async (t) => {
-		const root = makeTempRoot(t, "release-readiness");
-		const result = await run(process.execPath, [join(SCRIPTS, "readiness.mjs")], { cwd: root, env: isolatedEnv(root), timeoutMs: 30_000, root });
-		assert.equal(result.code, 1);
-		for (const blocker of RELEASE_BLOCKERS) assert.match(result.stdout, new RegExp(`BLOCKED: ${blocker.id}`));
-		assert.match(result.stdout, /::error::/);
-	});
-});
-
-describe("release mutation script: readiness stop", () => {
-	for (const [label, extra] of [
-		["a new version with OIDC", { REGISTRY_STATE: "version-absent" }],
-		["a first publication with a bootstrap token", { REGISTRY_STATE: "absent", BOOTSTRAP_NPM_TOKEN: BOOTSTRAP }],
-		["an exact same-commit retry", { REGISTRY_STATE: "same-commit-published" }],
-	]) {
-		it(`refuses ${label} before any command while blockers remain`, async (t) => {
-			const fixture = releaseFixture(t);
-			const result = await run(process.execPath, [join(SCRIPTS, "release.mjs")], { cwd: fixture.repo, env: fixture.releaseEnv(extra), timeoutMs: 30_000, root: fixture.root });
-			assert.equal(result.code, 1);
-			assert.match(result.stdout + result.stderr, /BLOCKED/);
-			assert.deepEqual(fixture.commands(), [], "not even a query ran");
-			assertNoMutation(fixture);
-			assert.equal(existsSync(fixture.summary), false);
-		});
-	}
 });
 
 describe("release mutation script: publication plan", () => {
@@ -358,7 +328,10 @@ describe("release mutation script: conflicts and failures", () => {
 		assert.match(error.message, /npm publish/);
 		const commands = fixture.commands();
 		assert.equal(commands.filter((entry) => entry.args[0] === "publish").length, 1);
-		assert.equal(commands.some((entry) => entry.args[1] === "create"), false);
+		assert.equal(
+			commands.some((entry) => entry.args[1] === "create"),
+			false,
+		);
 		assert.equal(fixture.remoteTag(), null);
 		assert.equal(fixture.localTag(), null);
 	});
@@ -368,7 +341,10 @@ describe("release mutation script: conflicts and failures", () => {
 		const { error } = inProcess(fixture, { FAKE_RACE_TAG_SHA: fixture.earlier });
 		assert.match(error.message, new RegExp(`${TAG} now points to ${fixture.earlier}`));
 		assert.equal(fixture.remoteTag(), fixture.earlier);
-		assert.equal(fixture.commands().some((entry) => entry.args[1] === "create"), false);
+		assert.equal(
+			fixture.commands().some((entry) => entry.args[1] === "create"),
+			false,
+		);
 	});
 
 	for (const [label, extra] of [
@@ -382,7 +358,10 @@ describe("release mutation script: conflicts and failures", () => {
 			assert.ok(error, `expected a refusal\n${output}`);
 			assert.match(error.message, new RegExp(`${TAG} now points to ${fixture.earlier}, not ${fixture.sha}`));
 			assert.equal(fixture.commands().filter((entry) => entry.args[0] === "publish").length, 1);
-			assert.equal(fixture.commands().some((entry) => entry.args[1] === "create"), false);
+			assert.equal(
+				fixture.commands().some((entry) => entry.args[1] === "create"),
+				false,
+			);
 			assert.doesNotMatch(output, /reusing|Released/);
 			assert.equal(fixture.remoteTag(), fixture.earlier, "the moved tag was not moved back");
 			assert.equal(existsSync(fixture.summary), false);
@@ -395,7 +374,10 @@ describe("release mutation script: conflicts and failures", () => {
 		const { error, output } = inProcess(fixture, { FAKE_RACE_TAG_DELETE: "1" });
 		assert.ok(error, `expected a refusal\n${output}`);
 		assert.match(error.message, new RegExp(`${TAG} disappeared from the remote`));
-		assert.equal(fixture.commands().some((entry) => entry.args[1] === "create"), false);
+		assert.equal(
+			fixture.commands().some((entry) => entry.args[1] === "create"),
+			false,
+		);
 		assert.equal(fixture.remoteTag(), null);
 	});
 
@@ -405,7 +387,10 @@ describe("release mutation script: conflicts and failures", () => {
 		const { error, output } = inProcess(fixture, { FAKE_RACE_BREAK_ORIGIN: "1" });
 		assert.ok(error, `expected a refusal\n${output}`);
 		assert.match(error.message, /git ls-remote for v1\.2\.3 failed/);
-		assert.equal(fixture.commands().some((entry) => entry.args[1] === "create"), false);
+		assert.equal(
+			fixture.commands().some((entry) => entry.args[1] === "create"),
+			false,
+		);
 		assert.equal(fixture.git(fixture.root, "--git-dir", `${fixture.origin}.moved`, "rev-parse", `refs/tags/${TAG}^{commit}`), fixture.sha);
 	});
 
