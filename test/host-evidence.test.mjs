@@ -8,6 +8,7 @@ import {
 	expectedSkill,
 	hostPreflight,
 	judgeCompletion,
+	judgeDiscovery,
 	judgeFork,
 	judgeGate,
 	judgeHandoff,
@@ -17,7 +18,8 @@ import {
 	judgeStandalone,
 	judgeTeardown,
 } from "./phase3/evidence.mjs";
-import { locatePrerequisites } from "./phase3/prerequisites.mjs";
+import { locatePrerequisites, resolveExecutable } from "./phase3/prerequisites.mjs";
+import { EXTENSIONS, SKILLS } from "./inventory.mjs";
 import { createScenarioTable } from "./phase3/scenarios.mjs";
 import { parseRequestBody, skillBlock, textReply, toolReply } from "./phase3/wire.mjs";
 import { makeTempRoot, PACKAGE_ROOT } from "./support.mjs";
@@ -441,7 +443,72 @@ describe("isolation and teardown evidence", () => {
 	});
 });
 
+describe("discovery evidence", () => {
+	const HOST = "/owned/host";
+	const PSTACK = "/owned/pstack";
+	const canonical = {
+		candidateRoot: CANDIDATE,
+		candidateExtension: join(CANDIDATE, EXTENSIONS[0]),
+		craftSkills: SKILLS.map(({ name, path }) => ({ name, path })),
+		hostRoot: HOST,
+		pstackRoot: PSTACK,
+		hostSkills: ["pi-herdr-agents"],
+		pstackSkills: ["poteto-mode"],
+		pstackExtension: join(PSTACK, "pi-extension/pstack/index.ts"),
+	};
+	const info = (path, source) => ({ path, source, scope: "user", origin: "package", baseDir: source });
+	const listed = (extra = []) => ({
+		data: {
+			commands: [
+				...SKILLS.map((skill) => ({ name: `skill:${skill.name}`, source: "skill", sourceInfo: info(join(CANDIDATE, skill.path), CANDIDATE) })),
+				{ name: "craft-mode", source: "extension", sourceInfo: info(canonical.candidateExtension, CANDIDATE) },
+				{ name: "skill:pi-herdr-agents", source: "skill", sourceInfo: info(join(HOST, "skills/pi-herdr-agents/SKILL.md"), HOST) },
+				{ name: "skill:poteto-mode", source: "skill", sourceInfo: info(join(PSTACK, "skills/poteto-mode/SKILL.md"), PSTACK) },
+				{ name: "subagent", source: "extension", sourceInfo: info(join(HOST, "index.ts"), HOST) },
+				{ name: "poteto-mode", source: "extension", sourceInfo: info(canonical.pstackExtension, PSTACK) },
+				{ name: "setup-pstack", source: "extension", sourceInfo: info(canonical.pstackExtension, PSTACK) },
+				...extra,
+			],
+		},
+	});
+	const judge = (commands) => judgeDiscovery({ commands, canonical });
+
+	it("accepts exactly the candidate's /craft-mode extension command beside its skills", () => {
+		assert.equal(judge(listed()).kind, "pass", judge(listed()).reason);
+	});
+
+	it("fails any other candidate command or a /craft-mode from another file", () => {
+		const extra = judge(listed([{ name: "craft-extra", source: "extension", sourceInfo: info(canonical.candidateExtension, CANDIDATE) }]));
+		assert.equal(extra.kind, "fail");
+		assert.match(extra.reason, /not exactly its \/craft-mode extension command: extension:craft-mode, extension:craft-extra/);
+		const moved = listed();
+		moved.data.commands.find((command) => command.name === "craft-mode").sourceInfo.path = join(CANDIDATE, "elsewhere.ts");
+		assert.equal(judge(moved).kind, "fail");
+		const missing = listed();
+		missing.data.commands = missing.data.commands.filter((command) => command.name !== "craft-mode");
+		assert.match(judge(missing).reason, /: none$/);
+	});
+});
+
 describe("integration prerequisites", () => {
+	it("skips a package-local node_modules/.bin that npm run puts first on PATH", (t) => {
+		const root = makeTempRoot(t, "path-order");
+		const local = join(root, "node_modules", ".bin");
+		const installed = join(root, "bin");
+		for (const dir of [local, installed]) {
+			mkdirSync(dir, { recursive: true });
+			writeFileSync(join(dir, "pi"), "#!/bin/sh\n");
+			chmodSync(join(dir, "pi"), 0o755);
+		}
+		assert.deepEqual(resolveExecutable({ PATH: `${local}:${installed}` }, { variable: "CLEAN_CRAFT_PI_BIN", name: "pi" }), { kind: "found", path: join(installed, "pi"), source: "PATH" });
+		assert.equal(resolveExecutable({ PATH: local }, { variable: "CLEAN_CRAFT_PI_BIN", name: "pi" }).kind, "blocked");
+		assert.equal(
+			resolveExecutable({ PATH: installed, CLEAN_CRAFT_PI_BIN: join(local, "pi") }, { variable: "CLEAN_CRAFT_PI_BIN", name: "pi" }).path,
+			join(local, "pi"),
+			"an explicit override still wins",
+		);
+	});
+
 	function fixture(t) {
 		const root = makeTempRoot(t, "prereq");
 		const bin = join(root, "bin");

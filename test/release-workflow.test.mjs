@@ -442,8 +442,8 @@ describe("release workflow walk", () => {
 describe("release metadata and documentation", () => {
 	const manifest = JSON.parse(read("package.json"));
 
-	it("names the public repository and prepares the public 0.1.0 package", () => {
-		assert.equal(manifest.version, "0.1.0");
+	it("names the public repository and prepares the public 0.2.0 package", () => {
+		assert.equal(manifest.version, "0.2.0");
 		assert.equal(manifest.private, undefined);
 		assert.deepEqual(manifest.repository, { type: "git", url: `git+https://github.com/${REPOSITORY}.git` });
 		assert.equal(manifest.homepage, `https://github.com/${REPOSITORY}#readme`);
@@ -456,10 +456,10 @@ describe("release metadata and documentation", () => {
 	it("runs the mandatory checks through exact development tools and fails fast", () => {
 		assert.deepEqual(manifest.scripts, {
 			check: "npm run typecheck && npm run lint && npm run format:check && npm test",
-			format: "biome format --write scripts test",
-			"format:check": "biome format scripts test",
-			lint: "oxlint scripts test",
-			typecheck: "tsc -p test/fixtures/retry-eligibility/tsconfig.json",
+			format: "biome format --write pi-extension scripts test",
+			"format:check": "biome format pi-extension scripts test",
+			lint: "oxlint pi-extension scripts test",
+			typecheck: "tsc -p test/fixtures/retry-eligibility/tsconfig.json && tsc -p pi-extension/tsconfig.json",
 			test: "node --test --test-concurrency=1 test/*.test.mjs",
 			"test:integration": "node --test --test-concurrency=1 test/integration/*.test.mjs",
 			changelog: "auto-changelog",
@@ -467,22 +467,23 @@ describe("release metadata and documentation", () => {
 		});
 		assert.equal(manifest.dependencies, undefined);
 		const biome = JSON.parse(read("biome.json"));
-		assert.deepEqual(biome.files.includes, ["scripts/**", "test/**", "!test/fixtures/**", "!**/*.md"]);
+		assert.deepEqual(biome.files.includes, ["pi-extension/**", "scripts/**", "test/**", "!test/fixtures/**", "!**/*.md"]);
 		assert.equal(biome.formatter.enabled, true);
 		const oxlint = JSON.parse(read(".oxlintrc.json"));
 		assert.deepEqual(oxlint.categories, { correctness: "error" });
 		assert.ok(oxlint.ignorePatterns.includes("test/fixtures/**"));
 		assert.equal(JSON.parse(read("test/fixtures/retry-eligibility/tsconfig.json")).compilerOptions.strict, true);
+		assert.equal(JSON.parse(read("pi-extension/tsconfig.json")).compilerOptions.strict, true);
 	});
 
 	it("locks exact development tools from npm and installs no peer", () => {
 		const lock = JSON.parse(read("package-lock.json"));
 		assert.equal(lock.lockfileVersion, 3);
 		assert.equal(lock.name, NAME);
-		const tools = { "@biomejs/biome": "2.5.11", oxlint: "1.80.0", typescript: "5.9.3" };
+		const tools = { "@biomejs/biome": "2.5.11", "@earendil-works/pi-coding-agent": "1.1.0", "@types/node": "26.6.5", oxlint: "1.80.0", typescript: "5.9.3" };
 		assert.deepEqual(lock.packages[""].devDependencies, { ...tools, "auto-changelog": "^2.6.0" });
 		assert.deepEqual(manifest.devDependencies, lock.packages[""].devDependencies);
-		assert.deepEqual(lock.packages[""].peerDependencies, { "pi-herdr-agents": "3.2.1" });
+		assert.deepEqual(lock.packages[""].peerDependencies, { "@earendil-works/pi-coding-agent": "*", "pi-herdr-agents": "3.2.1" });
 		assert.equal(lock.packages["node_modules/auto-changelog"].version, "2.7.0");
 		for (const [name, version] of Object.entries(tools)) assert.equal(lock.packages[`node_modules/${name}`].version, version, name);
 		assert.equal(lock.packages["node_modules/pi-herdr-agents"], undefined);

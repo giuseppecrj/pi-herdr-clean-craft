@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 Coordinate one engineering task so that every claim in the final report rests on evidence you observed: a failing test before a fix, a passing suite after it, a real dependency edge, or a qualified measurement. Pick the smallest workflow that can produce that evidence.
 
-This is a one-shot load. Reading this skill does not switch on a persistent mode, and it grants no permission beyond what the user has already given.
+This is a one-shot load. Reading this skill does not switch on a persistent mode, and it grants no permission beyond what the user has already given. Where the package's optional `/craft-mode` command is loaded, only the user switches it on or off. While it is on, Pi repeats these instructions and a short reminder on later requests. That keeps the same instructions in force and grants nothing more.
 
 ## What this release contains
 

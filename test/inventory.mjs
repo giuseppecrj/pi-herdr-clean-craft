@@ -57,6 +57,8 @@ export const SKILLS = [
 
 export const PACKAGED_DOCS = ["CHANGELOG.md", "LICENSE", "README.md", "RELEASING.md", "THIRD_PARTY_NOTICES.md", "docs/compatibility.md", "docs/provenance.md", "docs/verification.md"];
 
+export const EXTENSIONS = ["pi-extension/clean-craft/index.ts"];
+
 export const PLANNED_SKILLS = ["craft-qa", "craft-spec"];
 
 export function skillFiles() {
@@ -67,5 +69,5 @@ export function skillFiles() {
 }
 
 export function expectedPackFiles() {
-	return ["package.json", ...PACKAGED_DOCS, ...skillFiles()].toSorted();
+	return ["package.json", ...PACKAGED_DOCS, ...EXTENSIONS, ...skillFiles()].toSorted();
 }

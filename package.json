@@ -1,7 +1,7 @@
 {
 	"name": "pi-herdr-clean-craft",
-	"version": "0.1.0",
-	"description": "Unofficial Pi methodology pack inspired by Robert C. Martin's engineering practices. Six explicit-only skills: the craft-mode hub and its TDD, refactor, architecture, quality, and mutation stages.",
+	"version": "0.2.0",
+	"description": "Unofficial Pi methodology pack inspired by Robert C. Martin's engineering practices. Six explicit-only skills: the craft-mode hub and its TDD, refactor, architecture, quality, and mutation stages, plus an optional /craft-mode command that keeps the hub in force for a session branch.",
 	"keywords": ["pi-package", "pi", "herdr", "tdd", "refactoring", "clean-code"],
 	"license": "MIT",
 	"author": {
@@ -26,6 +26,7 @@
 		"docs/compatibility.md",
 		"docs/provenance.md",
 		"docs/verification.md",
+		"pi-extension/clean-craft/index.ts",
 		"skills/craft-mode/SKILL.md",
 		"skills/craft-mode/references/authorization.md",
 		"skills/craft-mode/references/delegation.md",
@@ -43,25 +44,29 @@
 	],
 	"scripts": {
 		"check": "npm run typecheck && npm run lint && npm run format:check && npm test",
-		"format": "biome format --write scripts test",
-		"format:check": "biome format scripts test",
-		"lint": "oxlint scripts test",
-		"typecheck": "tsc -p test/fixtures/retry-eligibility/tsconfig.json",
+		"format": "biome format --write pi-extension scripts test",
+		"format:check": "biome format pi-extension scripts test",
+		"lint": "oxlint pi-extension scripts test",
+		"typecheck": "tsc -p test/fixtures/retry-eligibility/tsconfig.json && tsc -p pi-extension/tsconfig.json",
 		"test": "node --test --test-concurrency=1 test/*.test.mjs",
 		"test:integration": "node --test --test-concurrency=1 test/integration/*.test.mjs",
 		"changelog": "auto-changelog",
 		"version": "auto-changelog --package && git add CHANGELOG.md"
 	},
 	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": "*",
 		"pi-herdr-agents": "3.2.1"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.11",
+		"@earendil-works/pi-coding-agent": "1.1.0",
+		"@types/node": "26.6.5",
 		"auto-changelog": "^2.6.0",
 		"oxlint": "1.80.0",
 		"typescript": "5.9.3"
 	},
 	"pi": {
+		"extensions": ["./pi-extension/clean-craft/index.ts"],
 		"skills": ["./skills"]
 	},
 	"publishConfig": {

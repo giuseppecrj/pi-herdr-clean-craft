@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { expectedPackFiles, SKILLS } from "../inventory.mjs";
+import { EXTENSIONS, expectedPackFiles, SKILLS } from "../inventory.mjs";
 import { extractPack, listFiles, packInto, parseFrontmatter } from "../support.mjs";
 import { MODEL_REF, writeAgentConfig } from "./agent-config.mjs";
 import { deadline, StepFailure } from "./event-log.mjs";
@@ -62,6 +62,7 @@ function canonicalEvidence({ candidate, host, pstack }) {
 		files,
 		skills,
 		craftSkills: SKILLS.map(({ name, path }) => ({ name, path })),
+		candidateExtension: join(candidate, EXTENSIONS[0]),
 		hostRoot: host.root,
 		pstackRoot: pstack.root,
 		hostSkills: packageSkillNames(host),
