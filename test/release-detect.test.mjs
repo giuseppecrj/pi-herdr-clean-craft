@@ -90,15 +90,15 @@ function assertRefused(result, pattern) {
 describe("release detection: the actual manifest", () => {
 	const actual = readFileSync(join(PACKAGE_ROOT, "package.json"), "utf8");
 	const parsed = JSON.parse(actual);
-	const predecessor = `${JSON.stringify({ ...parsed, version: "0.0.0", private: true }, null, "\t")}\n`;
+	const predecessor = `${JSON.stringify({ ...parsed, version: "0.1.0" }, null, "\t")}\n`;
 
-	it("is the public 0.1.0 manifest", () => {
-		assert.equal(parsed.version, "0.1.0");
+	it("is the public 0.2.0 manifest", () => {
+		assert.equal(parsed.version, "0.2.0");
 		assert.equal(parsed.private, undefined);
 	});
 
-	it("makes the push from the private 0.0.0 predecessor a candidate", async (t) => {
-		assertCandidate(await detect(t, { previous: predecessor, current: actual }), "0.1.0", "version-increase");
+	it("makes the push from the published 0.1.0 predecessor a candidate", async (t) => {
+		assertCandidate(await detect(t, { previous: predecessor, current: actual }), "0.2.0", "version-increase");
 	});
 
 	it("skips a later push that keeps the same public version", async (t) => {
@@ -106,7 +106,7 @@ describe("release detection: the actual manifest", () => {
 	});
 
 	it("makes a main-branch dispatch a candidate", async (t) => {
-		assertCandidate(await detect(t, { event: "workflow_dispatch", current: actual }), "0.1.0", "dispatch");
+		assertCandidate(await detect(t, { event: "workflow_dispatch", current: actual }), "0.2.0", "dispatch");
 	});
 });
 

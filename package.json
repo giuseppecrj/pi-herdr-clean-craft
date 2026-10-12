@@ -1,7 +1,7 @@
 {
 	"name": "pi-herdr-clean-craft",
-	"version": "0.1.0",
-	"description": "Unofficial Pi methodology pack inspired by Robert C. Martin's engineering practices. Six explicit-only skills: the craft-mode hub and its TDD, refactor, architecture, quality, and mutation stages.",
+	"version": "0.2.0",
+	"description": "Unofficial Pi methodology pack inspired by Robert C. Martin's engineering practices. Six explicit-only skills: the craft-mode hub and its TDD, refactor, architecture, quality, and mutation stages, plus an optional /craft-mode command that keeps the hub in force for a session branch.",
 	"keywords": ["pi-package", "pi", "herdr", "tdd", "refactoring", "clean-code"],
 	"license": "MIT",
 	"author": {

@@ -32,9 +32,9 @@ Observed on 2026-10-10. The TypeScript, Biome, and oxlint rows were observed on 
 - A Phase 1 coordinator check ran `pi install <checkout> --no-approve` in two fresh temporary environments, then discovered the skill through RPC. Saved relative paths resolved from the temporary agent directory. The operator's Pi and Herdr settings hashes were unchanged during these checks. This exercised local-source registration, not registry or dependency installation.
 - The package file list matches the manifest allowlist, and every bundled reference resolves.
 
-## `/craft-mode` command, local candidate
+## `/craft-mode` command
 
-This checkout adds an optional `/craft-mode` command. Published 0.1.0 ships the six skills only and does not contain it. Measured on 2026-10-12 with Pi 1.1.0, a scripted loopback model, and test-owned sessions; see [Verification](verification.md). This is request-level evidence, not model behavior.
+Version 0.2.0 adds an optional `/craft-mode` command; 0.1.0 ships the six skills only. Measured on 2026-10-12 with Pi 1.1.0, a scripted loopback model, and test-owned sessions; see [Verification](verification.md). This is request-level evidence, not model behavior.
 
 Exercised:
 

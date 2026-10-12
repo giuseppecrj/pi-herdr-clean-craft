@@ -4,7 +4,7 @@ This page describes how the release workflow decides, checks, and publishes a ve
 
 ## Release scope
 
-The first stable version, 0.1.0, ships six explicit-only skills: the craft-mode hub and the craft-tdd, craft-refactor, craft-architecture, craft-quality, and craft-mutation stages. Specification and final QA stage skills are planned and do not ship. Two limitations are known: the host's `skills` argument does not deliver a skill to a standalone child, so the child must read the named skill files itself, and no live-model evaluation of the methodology has been run. The [README](README.md) describes both.
+The first stable version, 0.1.0, ships six explicit-only skills: the craft-mode hub and the craft-tdd, craft-refactor, craft-architecture, craft-quality, and craft-mutation stages. Specification and final QA stage skills are planned and do not ship. Version 0.2.0 adds the optional `/craft-mode` extension command, which keeps the hub in force for a session branch; [compatibility](docs/compatibility.md) lists what was measured and its limits. Two limitations are known: the host's `skills` argument does not deliver a skill to a standalone child, so the child must read the named skill files itself, and no live-model evaluation of the methodology has been run. The [README](README.md) describes both.
 
 ## Mandatory checks
 

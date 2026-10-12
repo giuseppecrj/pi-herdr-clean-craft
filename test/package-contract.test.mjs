@@ -63,9 +63,9 @@ const LIFECYCLE_SCRIPTS = [
 ];
 
 describe("manifest", () => {
-	it("identifies the public 0.1.0 MIT Pi package", () => {
+	it("identifies the public 0.2.0 MIT Pi package", () => {
 		assert.equal(manifest.name, "pi-herdr-clean-craft");
-		assert.equal(manifest.version, "0.1.0");
+		assert.equal(manifest.version, "0.2.0");
 		assert.equal(manifest.private, undefined);
 		assert.deepEqual(manifest.publishConfig, { access: "public" });
 		assert.equal(manifest.license, "MIT");

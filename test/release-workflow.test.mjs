@@ -442,8 +442,8 @@ describe("release workflow walk", () => {
 describe("release metadata and documentation", () => {
 	const manifest = JSON.parse(read("package.json"));
 
-	it("names the public repository and prepares the public 0.1.0 package", () => {
-		assert.equal(manifest.version, "0.1.0");
+	it("names the public repository and prepares the public 0.2.0 package", () => {
+		assert.equal(manifest.version, "0.2.0");
 		assert.equal(manifest.private, undefined);
 		assert.deepEqual(manifest.repository, { type: "git", url: `git+https://github.com/${REPOSITORY}.git` });
 		assert.equal(manifest.homepage, `https://github.com/${REPOSITORY}#readme`);

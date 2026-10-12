@@ -112,7 +112,6 @@ describe("/craft-mode registration and controls", () => {
 		);
 		const ledger = await lab.finish();
 		assert.equal(ledger.length, 0, "no control reached the provider");
-		assert.equal(JSON.parse(readFileSync(join(PACKAGE_ROOT, "package.json"), "utf8")).version, "0.1.0");
 		lab.markPassed();
 	});
 });
