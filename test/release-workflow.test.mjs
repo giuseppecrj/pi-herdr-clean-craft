@@ -127,7 +127,7 @@ describe("release workflow layout", () => {
 		for (const [key, value] of Object.entries(detect.outputs)) assert.equal(value, `\${{ steps.detect.outputs.${key} }}`);
 	});
 
-	it("pins actions by commit, checks out full history without credentials, and pins Node 26.8.2", () => {
+	it("pins actions by commit, checks out full history without credentials, and pins Node 26.12.1", () => {
 		const steps = [WORKFLOW.jobs.detect, WORKFLOW.jobs.release].flatMap((job) => job.steps);
 		const uses = steps.filter((step) => step.uses);
 		assert.deepEqual(
@@ -138,8 +138,8 @@ describe("release workflow layout", () => {
 			assert.deepEqual(step.with, { "fetch-depth": "0", "persist-credentials": "false" });
 		}
 		const nodes = uses.filter((step) => step.uses.startsWith(SETUP_NODE));
-		assert.deepEqual(nodes[0].with, { "node-version": "26.8.2", "package-manager-cache": "false" });
-		assert.deepEqual(nodes[1].with, { "node-version": "26.8.2", "registry-url": "https://registry.npmjs.org", "package-manager-cache": "false" });
+		assert.deepEqual(nodes[0].with, { "node-version": "26.12.1", "package-manager-cache": "false" });
+		assert.deepEqual(nodes[1].with, { "node-version": "26.12.1", "registry-url": "https://registry.npmjs.org", "package-manager-cache": "false" });
 	});
 
 	it("runs the release steps in order with no condition, skip, or continue-on-error", () => {
@@ -552,7 +552,7 @@ describe("metadata-only bootstrap job", () => {
 			[CHECKOUT, SETUP_NODE, "Stage and publish bootstrap metadata"],
 		);
 		assert.deepEqual(job.steps[0].with, { "fetch-depth": "0", "persist-credentials": "false" });
-		assert.deepEqual(job.steps[1].with, { "node-version": "26.8.2", "registry-url": "https://registry.npmjs.org", "package-manager-cache": "false" });
+		assert.deepEqual(job.steps[1].with, { "node-version": "26.12.1", "registry-url": "https://registry.npmjs.org", "package-manager-cache": "false" });
 		assert.deepEqual(job.steps[2].env, { NODE_AUTH_TOKEN: "''", BEFORE_SHA: "${{ github.event.before }}" });
 		assert.doesNotMatch(job.if, /head_commit\.(added|modified|removed)/);
 		assert.doesNotMatch(BOOTSTRAP_RUN, /\$\{\{|TOKEN|secrets|npm pack|git tag|gh /);

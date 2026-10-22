@@ -50,7 +50,7 @@ The release job then runs these steps, and any failure stops the rest:
 The last step decides the npm credential and reads the existing tag and release before its first change:
 
 - If the package does not exist on npm, the repository secret `NPM_TOKEN` must be set. It is used once to create the package.
-- If the package exists, `NPM_TOKEN` must not be set, including on an exact retry. Publishing uses OIDC trusted publishing with no token, and needs npm 11.5.1 or later and Node 22.14.0 or later. The pinned Node 26.8.2 provides both.
+- If the package exists, `NPM_TOKEN` must not be set, including on an exact retry. Publishing uses OIDC trusted publishing with no token, and needs npm 11.5.1 or later and Node 22.14.0 or later. The pinned Node 26.12.1 provides both.
 - A tag `vX.Y.Z` that already exists must point at this commit, locally and on GitHub. Tags are never moved or force-pushed.
 - An existing GitHub Release for the tag is reused unchanged. A draft release, or a release without its tag, stops the run.
 
